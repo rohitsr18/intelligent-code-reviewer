@@ -1,5 +1,3 @@
-"""Main FastAPI application entrypoint for 24/7 Intelligent Code Reviewer."""
-
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import FastAPI, Request, status
@@ -15,22 +13,17 @@ setup_logging(level=settings.log_level, json_format=(settings.environment == "pr
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan context for startup and graceful shutdown."""
-    # Startup tasks
     yield
-    # Shutdown tasks
 
 
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
-    description="Enterprise Multi-Language Automated Code Reviewer on Google Cloud Platform",
     docs_url="/docs" if settings.environment != "production" else None,
     redoc_url="/redoc" if settings.environment != "production" else None,
     lifespan=lifespan,
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_cors_origins,
@@ -42,7 +35,6 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    """Enforce defense-in-depth HTTP security headers."""
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -52,17 +44,16 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
-# Include Routers
 app.include_router(health_router)
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Sanitized global exception handler to prevent leaking stack traces or internal secrets."""
+    # Don't dump raw exceptions to clients
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal Server Error",
-            "message": "An unexpected error occurred while processing the request.",
+            "message": "Something went wrong processing this request.",
         },
     )

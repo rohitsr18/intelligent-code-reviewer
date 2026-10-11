@@ -1,12 +1,6 @@
-"""Production-grade Code Sanitizer and Secret / PII Scrubber.
-
-Prevents sensitive data leaks (API keys, credentials, private keys, PII)
-from ever reaching LLMs (Gemini) or third-party APIs.
-"""
-
 import math
 import re
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict
 from app.security.models import (
     RedactedSecret,
     SanitizationResult,
@@ -15,22 +9,18 @@ from app.security.models import (
 
 
 def calculate_shannon_entropy(text: str) -> float:
-    """Calculate the Shannon entropy of a string."""
+    """Calculates Shannon entropy to detect high-randomness tokens (like generated API keys)."""
     if not text:
         return 0.0
-    entropy = 0.0
     length = len(text)
-    frequencies: Dict[str, int] = {}
+    counts: Dict[str, int] = {}
     for char in text:
-        frequencies[char] = frequencies.get(char, 0) + 1
-    for count in frequencies.values():
-        p_x = count / length
-        entropy -= p_x * math.log2(p_x)
-    return entropy
+        counts[char] = counts.get(char, 0) + 1
+    return -sum((c / length) * math.log2(c / length) for c in counts.values())
 
 
 class CodeSanitizer:
-    """Detects and redacts credentials, secrets, and PII in source code."""
+    """Strips secrets and PII from source code before passing it to LLMs."""
 
     def __init__(
         self,
@@ -42,7 +32,6 @@ class CodeSanitizer:
         self.scan_secrets = scan_secrets
         self.scan_pii = scan_pii
 
-        # Precompiled regex patterns for known credentials
         self._secret_patterns: List[Tuple[str, re.Pattern, SecuritySeverity]] = [
             (
                 "PRIVATE_KEY",
@@ -79,19 +68,18 @@ class CodeSanitizer:
             ),
         ]
 
-        # Password / secret assignment pattern
+        # Match credential variables assignments like db_password = "..." or apiKey: "..."
         self._assignment_pattern = re.compile(
             r"""(?i)(["']?(?:[a-zA-Z0-9_]*(?:password|passwd|pass|pwd|secret|api_key|apikey|token|credential)[a-zA-Z0-9_]*)["']?\s*[:=]\s*["'])([^"'\n\r]{6,})(["'])""",
             re.MULTILINE,
         )
 
-        # Database connection URI credentials pattern
+        # Catch password embedded in database connection URIs
         self._db_uri_pattern = re.compile(
             r"""((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis)://[a-zA-Z0-9_\-\.%]+:)([^@/\s]+)(@[a-zA-Z0-9_\-\.]+)""",
             re.IGNORECASE,
         )
 
-        # PII patterns
         self._email_pattern = re.compile(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
         )
@@ -100,7 +88,6 @@ class CodeSanitizer:
         )
 
     def sanitize(self, code: str) -> SanitizationResult:
-        """Sanitize code by scrubbing all detected secrets and PII."""
         if not code:
             return SanitizationResult(
                 original_line_count=0,
@@ -116,19 +103,15 @@ class CodeSanitizer:
         has_pii = False
         redaction_counter = 0
 
-        # 1. Private Keys & Multi-line credentials
         if self.scan_secrets:
+            # Check known secret format regexes first
             for secret_type, pattern, severity in self._secret_patterns:
                 def replace_secret(match: re.Match) -> str:
                     nonlocal redaction_counter, has_secrets
                     redaction_counter += 1
                     has_secrets = True
                     token = f"<REDACTED_SECRET:{secret_type}:{redaction_counter}>"
-                    
-                    # Compute line number
-                    start_pos = match.start()
-                    line_no = code[:start_pos].count("\n") + 1
-                    
+                    line_no = code[:match.start()].count("\n") + 1
                     redactions.append(
                         RedactedSecret(
                             secret_type=secret_type,
@@ -141,7 +124,7 @@ class CodeSanitizer:
 
                 sanitized = pattern.sub(replace_secret, sanitized)
 
-            # 2. Database URI passwords
+            # Scrub passwords inside database connection strings
             def replace_db_pwd(match: re.Match) -> str:
                 nonlocal redaction_counter, has_secrets
                 redaction_counter += 1
@@ -160,14 +143,10 @@ class CodeSanitizer:
 
             sanitized = self._db_uri_pattern.sub(replace_db_pwd, sanitized)
 
-            # 3. Key-Value Secret & Password assignments
+            # Mask generic password/token variable assignments
             def replace_assignment(match: re.Match) -> str:
                 nonlocal redaction_counter, has_secrets
-                prefix = match.group(1)
-                val = match.group(2)
-                suffix = match.group(3)
-                
-                # If already redacted, keep it
+                prefix, val, suffix = match.group(1), match.group(2), match.group(3)
                 if "<REDACTED" in val:
                     return match.group(0)
 
@@ -187,20 +166,19 @@ class CodeSanitizer:
 
             sanitized = self._assignment_pattern.sub(replace_assignment, sanitized)
 
-            # 4. High-Entropy String Scanner (captures non-standard API keys)
+            # High entropy checks for random/opaque keys not covered by known prefixes
             sanitized = self._scrub_high_entropy_strings(sanitized, redactions)
             if any(r.secret_type == "HIGH_ENTROPY_TOKEN" for r in redactions):
                 has_secrets = True
 
-        # 5. PII Scrubbing
         if self.scan_pii:
-            # Email addresses
+            # Mask emails (skip standard sample domains in comments/docs)
             def replace_email(match: re.Match) -> str:
                 nonlocal redaction_counter, has_pii
                 email = match.group(0)
-                # Ignore common code comment placeholders like example@example.com
                 if "example.com" in email.lower() or "test.com" in email.lower():
                     return email
+
                 redaction_counter += 1
                 has_pii = True
                 token = f"<REDACTED_PII:EMAIL:{redaction_counter}>"
@@ -217,12 +195,13 @@ class CodeSanitizer:
 
             sanitized = self._email_pattern.sub(replace_email, sanitized)
 
-            # External IP Addresses (ignore loopback / broadcast)
+            # Mask non-local IPv4 addresses
             def replace_ip(match: re.Match) -> str:
                 nonlocal redaction_counter, has_pii
                 ip = match.group(0)
                 if ip.startswith("127.") or ip in ("0.0.0.0", "255.255.255.255", "1.1.1.1", "8.8.8.8"):
                     return ip
+
                 redaction_counter += 1
                 has_pii = True
                 token = f"<REDACTED_PII:IP:{redaction_counter}>"
@@ -250,21 +229,17 @@ class CodeSanitizer:
     def _scrub_high_entropy_strings(
         self, code: str, redactions: List[RedactedSecret]
     ) -> str:
-        """Scan string literals for suspiciously high Shannon entropy."""
         str_literal_pattern = re.compile(r"""(["'])([^"'\r\n]{16,})\1""")
         entropy_counter = len(redactions)
 
         def check_entropy(match: re.Match) -> str:
             nonlocal entropy_counter
-            quote = match.group(1)
-            candidate = match.group(2)
+            quote, candidate = match.group(1), match.group(2)
 
-            # Ignore already redacted tokens
             if "<REDACTED" in candidate:
                 return match.group(0)
 
-            entropy = calculate_shannon_entropy(candidate)
-            if entropy >= self.entropy_threshold:
+            if calculate_shannon_entropy(candidate) >= self.entropy_threshold:
                 entropy_counter += 1
                 token = f"<REDACTED_SECRET:HIGH_ENTROPY_TOKEN:{entropy_counter}>"
                 line_no = code[:match.start()].count("\n") + 1

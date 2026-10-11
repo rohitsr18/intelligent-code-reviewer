@@ -1,28 +1,16 @@
-"""Health check endpoints for Cloud Run container lifecycle."""
-
 from typing import Dict, Any
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from app.core.config import get_settings
 
 router = APIRouter(tags=["Health"])
 
 
-@router.get(
-    "/health/live",
-    status_code=status.HTTP_200_OK,
-    summary="Liveness Probe",
-    description="Returns 200 if the container process is responsive.",
-)
+@router.get("/health/live")
 async def liveness() -> Dict[str, str]:
     return {"status": "alive"}
 
 
-@router.get(
-    "/health/ready",
-    status_code=status.HTTP_200_OK,
-    summary="Readiness Probe",
-    description="Returns 200 when all core configurations are valid.",
-)
+@router.get("/health/ready")
 async def readiness() -> Dict[str, Any]:
     settings = get_settings()
     return {

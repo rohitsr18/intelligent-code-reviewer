@@ -1,10 +1,7 @@
-"""Tests for configuration management."""
-
 from app.core.config import Settings, get_settings
 
 
 def test_default_settings():
-    """Verify default production-ready configurations."""
     settings = Settings()
     assert settings.app_name == "24/7 Intelligent Code Reviewer"
     assert settings.port == 8080
@@ -15,7 +12,6 @@ def test_default_settings():
 
 
 def test_get_settings_caching():
-    """Verify that get_settings singleton behaves idempotently."""
     s1 = get_settings()
     s2 = get_settings()
     assert s1 is s2

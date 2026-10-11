@@ -1,5 +1,3 @@
-"""AI Security and Data Leak Prevention layer."""
-
 from app.security.models import (
     RedactedSecret,
     SanitizationResult,

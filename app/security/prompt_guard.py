@@ -1,16 +1,10 @@
-"""AI Security Prompt Guard to prevent Prompt Injection and Jailbreaks.
-
-Untrusted code submitted by developers could contain adversarial instructions
-attempting to manipulate Gemini's review output or bypass review policies.
-"""
-
 import re
 from typing import List, Tuple
 from app.security.models import PromptGuardResult
 
 
 class PromptGuard:
-    """Detects adversarial injection attacks and encapsulates untrusted input."""
+    """Guards against prompt injection and delimiters escape in uploaded code."""
 
     INJECTION_PATTERNS: List[Tuple[str, re.Pattern, float]] = [
         (
@@ -55,7 +49,6 @@ class PromptGuard:
         language: str = "text",
         context: str = "",
     ) -> PromptGuardResult:
-        """Analyze code for injection attempts and securely wrap within isolation boundaries."""
         if not code:
             return PromptGuardResult(
                 is_safe=True,
@@ -67,30 +60,26 @@ class PromptGuard:
         flags: List[str] = []
         max_risk: float = 0.0
 
-        # 1. Pattern scanning for adversarial directives
         for flag_name, pattern, weight in self.INJECTION_PATTERNS:
             if pattern.search(code) or (context and pattern.search(context)):
                 flags.append(flag_name)
                 max_risk = max(max_risk, weight)
 
-        # 2. Neutralize deliberate boundary escape attacks
-        # E.g., if code attempts to inject closing boundary tag </untrusted_source_code>
+        # Defuse closing tags in user code to prevent premature boundary closing
         escaped_code = code.replace(
             self.BOUNDARY_TAG_CLOSE,
             "&lt;/untrusted_source_code&gt;",
         )
 
-        # 3. Construct securely sandboxed representation
+        # Wrap in unambiguous tags so the model treats content strictly as data
         secured_prompt = (
             f'{self.BOUNDARY_TAG_OPEN} language="{language}">\n'
             f"{escaped_code}\n"
             f"{self.BOUNDARY_TAG_CLOSE}"
         )
 
-        is_safe = max_risk < self.risk_threshold
-
         return PromptGuardResult(
-            is_safe=is_safe,
+            is_safe=(max_risk < self.risk_threshold),
             risk_score=round(max_risk, 2),
             flags=flags,
             secured_prompt=secured_prompt,
