@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.rate_limiter import check_api_rate_limit
 from app.security.sanitizer import CodeSanitizer
 from app.security.prompt_guard import PromptGuard
+from app.reviewer.engine import BaseReviewEngine, get_review_engine
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -45,6 +46,7 @@ async def submit_code_for_review(
     user: AuthenticatedUser = Depends(get_current_user),
     sanitizer: CodeSanitizer = Depends(get_sanitizer),
     guard: PromptGuard = Depends(get_prompt_guard),
+    engine: BaseReviewEngine = Depends(get_review_engine),
 ) -> ReviewSubmissionResponse:
     settings = get_settings()
 
@@ -93,6 +95,14 @@ async def submit_code_for_review(
         for r in sanitization_result.redactions
     ]
 
+    # 3. Analyze code with AI review engine
+    analysis = await engine.analyze(
+        code=guard_result.secured_prompt,
+        language=submission.language,
+        filename=submission.filename,
+        context=submission.context,
+    )
+
     record = {
         "review_id": review_id,
         "status": review_status,
@@ -108,6 +118,7 @@ async def submit_code_for_review(
         "risk_score": guard_result.risk_score,
         "is_safe_prompt": guard_result.is_safe,
         "flags": guard_result.flags,
+        "analysis": analysis,
     }
 
     _review_store[review_id] = record
@@ -125,6 +136,7 @@ async def submit_code_for_review(
         submitted_at=submitted_at,
         filename=submission.filename,
         language=submission.language,
+        analysis=analysis,
     )
 
 
@@ -163,4 +175,5 @@ async def get_review_submission(
         risk_score=record["risk_score"],
         is_safe_prompt=record["is_safe_prompt"],
         flags=record.get("flags", []),
+        analysis=record.get("analysis"),
     )

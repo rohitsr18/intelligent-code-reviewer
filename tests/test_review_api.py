@@ -21,6 +21,9 @@ async def test_submit_valid_code_with_secrets(async_client: AsyncClient):
     assert data["submitted_by"] == "dev@company.com"
     assert data["is_safe_prompt"] is True
     assert data["filename"] == "s3_client.py"
+    assert data["analysis"] is not None
+    assert "overall_score" in data["analysis"]
+    assert "findings" in data["analysis"]
 
 
 @pytest.mark.asyncio
@@ -100,6 +103,8 @@ async def test_get_review_submission_detail(async_client: AsyncClient):
     assert detail_res.status_code == 200
     assert detail_res.json()["review_id"] == review_id
     assert detail_res.json()["submitted_by"] == "alice@company.com"
+    assert detail_res.json()["analysis"] is not None
+    assert "overall_score" in detail_res.json()["analysis"]
 
 
 @pytest.mark.asyncio

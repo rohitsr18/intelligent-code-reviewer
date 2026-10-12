@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from app.auth.models import Role
+from app.reviewer.models import ReviewAnalysisResult
 
 SUPPORTED_LANGUAGES = {
     "python",
@@ -66,6 +67,7 @@ class ReviewSubmissionResponse(BaseModel):
     submitted_at: datetime
     filename: Optional[str] = None
     language: str
+    analysis: Optional[ReviewAnalysisResult] = None
 
 
 class ReviewDetailResponse(BaseModel):
@@ -81,6 +83,7 @@ class ReviewDetailResponse(BaseModel):
     risk_score: float
     is_safe_prompt: bool
     flags: List[str] = Field(default_factory=list)
+    analysis: Optional[ReviewAnalysisResult] = None
 
 
 class UserSessionResponse(BaseModel):
