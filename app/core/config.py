@@ -49,6 +49,12 @@ class Settings(BaseSettings):
         default=True, alias="PROMPT_INJECTION_DEFENSE_ENABLED"
     )
     entropy_threshold: float = Field(default=4.5, alias="ENTROPY_THRESHOLD")
+    # Access control & limits
+    admin_emails: List[str] = ["admin@company.com"]
+    max_code_size_bytes: int = Field(default=500_000, alias="MAX_CODE_SIZE_BYTES")
+    max_code_lines: int = Field(default=5000, alias="MAX_CODE_LINES")
+    rate_limit_per_minute: int = Field(default=60, alias="RATE_LIMIT_PER_MINUTE")
+
     allowed_cors_origins: List[str] = ["*"]
 
 

@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.api.v1.health import router as health_router
+from app.api.v1.review import router as review_router
+from app.api.v1.sessions import router as sessions_router
 
 settings = get_settings()
 setup_logging(level=settings.log_level, json_format=(settings.environment == "production"))
@@ -41,15 +43,31 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "no-referrer"
+
+    # Forward rate limit header if computed
+    if hasattr(request.state, "rate_limit_remaining"):
+        response.headers["X-RateLimit-Remaining"] = str(request.state.rate_limit_remaining)
+
     return response
 
 
+# Include Routers
 app.include_router(health_router)
+app.include_router(review_router, prefix="/api/v1")
+app.include_router(sessions_router, prefix="/api/v1")
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers,
+    )
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    # Don't dump raw exceptions to clients
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
