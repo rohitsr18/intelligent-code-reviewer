@@ -67,6 +67,7 @@ class ReviewSubmissionResponse(BaseModel):
     submitted_at: datetime
     filename: Optional[str] = None
     language: str
+    rules_applied_count: int = 0
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -83,6 +84,7 @@ class ReviewDetailResponse(BaseModel):
     risk_score: float
     is_safe_prompt: bool
     flags: List[str] = Field(default_factory=list)
+    rules_applied_count: int = 0
     analysis: Optional[ReviewAnalysisResult] = None
 
 

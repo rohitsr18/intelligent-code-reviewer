@@ -15,6 +15,7 @@ from app.core.rate_limiter import check_api_rate_limit
 from app.security.sanitizer import CodeSanitizer
 from app.security.prompt_guard import PromptGuard
 from app.reviewer.engine import BaseReviewEngine, get_review_engine
+from app.analytics.service import HistoricalLearningService, get_historical_learning_service
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -47,6 +48,7 @@ async def submit_code_for_review(
     sanitizer: CodeSanitizer = Depends(get_sanitizer),
     guard: PromptGuard = Depends(get_prompt_guard),
     engine: BaseReviewEngine = Depends(get_review_engine),
+    learning_service: HistoricalLearningService = Depends(get_historical_learning_service),
 ) -> ReviewSubmissionResponse:
     settings = get_settings()
 
@@ -95,12 +97,32 @@ async def submit_code_for_review(
         for r in sanitization_result.redactions
     ]
 
-    # 3. Analyze code with AI review engine
+    # 3. Retrieve matching team rules from BigQuery historical engine
+    active_rules = await learning_service.get_enrichment_rules(language=submission.language)
+    prompt_rules = learning_service.format_rules_for_prompt(active_rules)
+
+    # 4. Analyze code with AI review engine enriched with team rules
     analysis = await engine.analyze(
         code=guard_result.secured_prompt,
         language=submission.language,
         filename=submission.filename,
         context=submission.context,
+        rules=prompt_rules,
+    )
+
+    # 5. Record analytical telemetry in BigQuery
+    await learning_service.record_review_event(
+        review_id=review_id,
+        user_id=user.user_id,
+        user_email=user.email,
+        language=submission.language,
+        filename=submission.filename,
+        original_line_count=sanitization_result.original_line_count,
+        sanitized_secrets_count=sanitization_result.total_redactions,
+        prompt_risk_score=guard_result.risk_score,
+        review_status=review_status,
+        analysis=analysis,
+        rules_applied_count=len(prompt_rules),
     )
 
     record = {
@@ -118,6 +140,7 @@ async def submit_code_for_review(
         "risk_score": guard_result.risk_score,
         "is_safe_prompt": guard_result.is_safe,
         "flags": guard_result.flags,
+        "rules_applied_count": len(prompt_rules),
         "analysis": analysis,
     }
 
@@ -136,6 +159,7 @@ async def submit_code_for_review(
         submitted_at=submitted_at,
         filename=submission.filename,
         language=submission.language,
+        rules_applied_count=len(prompt_rules),
         analysis=analysis,
     )
 
@@ -175,5 +199,6 @@ async def get_review_submission(
         risk_score=record["risk_score"],
         is_safe_prompt=record["is_safe_prompt"],
         flags=record.get("flags", []),
+        rules_applied_count=record.get("rules_applied_count", 0),
         analysis=record.get("analysis"),
     )

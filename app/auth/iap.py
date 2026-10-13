@@ -104,6 +104,7 @@ async def get_current_user(
     request: Request,
     x_goog_iap_jwt_assertion: Optional[str] = Header(None, alias="x-goog-iap-jwt-assertion"),
     x_mock_user_email: Optional[str] = Header(None, alias="x-mock-user-email"),
+    x_mock_user_role: Optional[str] = Header(None, alias="x-mock-user-role"),
 ) -> AuthenticatedUser:
     settings = get_settings()
 
@@ -116,6 +117,10 @@ async def get_current_user(
     if not isinstance(x_mock_user_email, str):
         val = headers.get("x-mock-user-email") if hasattr(headers, "get") else None
         x_mock_user_email = val if isinstance(val, str) else None
+
+    if not isinstance(x_mock_user_role, str):
+        val = headers.get("x-mock-user-role") if hasattr(headers, "get") else None
+        x_mock_user_role = val if isinstance(val, str) else None
 
     # Local development or testing mode
     if not settings.iap_enabled:
@@ -142,13 +147,16 @@ async def get_current_user(
 
         # Fallback to mock header or default dev user
         email = x_mock_user_email or "developer@company.local"
-        role = resolve_role(email, {})
+        claims = {"dev_mode": True}
+        if x_mock_user_role:
+            claims["role"] = x_mock_user_role.lower()
+        role = resolve_role(email, claims)
         return AuthenticatedUser(
             user_id=f"dev-user-{email.split('@')[0]}",
             email=email,
             role=role,
             hosted_domain="company.local",
-            claims={"dev_mode": True},
+            claims=claims,
         )
 
     # Production IAP enforcement
