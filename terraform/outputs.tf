@@ -27,3 +27,4 @@ output "service_account_email" {
   description = "Service account email assigned to Cloud Run"
   value       = google_service_account.reviewer_sa.email
 }
+

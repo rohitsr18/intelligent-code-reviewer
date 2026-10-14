@@ -27,3 +27,4 @@ GROUP BY
     user_id,
     user_email,
     language;
+

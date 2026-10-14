@@ -28,3 +28,4 @@ GROUP BY
     hr.guidance
 ORDER BY
     total_enforcements DESC;
+

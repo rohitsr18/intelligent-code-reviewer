@@ -105,3 +105,4 @@ def test_docs_integrity():
     deploy_doc = os.path.join(docs_dir, "DEPLOYMENT_RUNBOOK.md")
     assert os.path.isfile(looker_doc)
     assert os.path.isfile(deploy_doc)
+

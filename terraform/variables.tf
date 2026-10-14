@@ -45,3 +45,4 @@ variable "admin_emails" {
   type        = list(string)
   default     = ["admin@company.com"]
 }
+

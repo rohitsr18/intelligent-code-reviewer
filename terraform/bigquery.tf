@@ -107,3 +107,4 @@ resource "google_bigquery_table" "vw_recurring_anti_patterns" {
 
   depends_on = [google_bigquery_table.review_events, google_bigquery_table.historical_rules]
 }
+

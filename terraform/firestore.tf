@@ -9,3 +9,4 @@ resource "google_firestore_database" "database" {
 
   depends_on = [google_project_service.enabled_apis]
 }
+

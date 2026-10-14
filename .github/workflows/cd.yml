@@ -50,3 +50,4 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE_TAG }}
           flags: "--allow-unauthenticated --traffic=100"
+

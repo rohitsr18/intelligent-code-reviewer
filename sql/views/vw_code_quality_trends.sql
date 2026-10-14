@@ -22,3 +22,4 @@ GROUP BY
 ORDER BY
     review_date DESC,
     reviews_submitted DESC;
+
