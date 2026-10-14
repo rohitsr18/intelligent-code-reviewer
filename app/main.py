@@ -9,6 +9,8 @@ from app.api.v1.health import router as health_router
 from app.api.v1.review import router as review_router
 from app.api.v1.sessions import router as sessions_router
 from app.api.v1.rules import router as rules_router
+from app.api.v1.reviews_query import router as reviews_query_router
+from app.api.v1.growth import router as growth_router
 
 settings = get_settings()
 setup_logging(level=settings.log_level, json_format=(settings.environment == "production"))
@@ -57,6 +59,8 @@ app.include_router(health_router)
 app.include_router(review_router, prefix="/api/v1")
 app.include_router(sessions_router, prefix="/api/v1")
 app.include_router(rules_router, prefix="/api/v1")
+app.include_router(reviews_query_router, prefix="/api/v1")
+app.include_router(growth_router, prefix="/api/v1")
 
 
 @app.exception_handler(HTTPException)

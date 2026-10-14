@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 from app.auth.models import Role
 from app.reviewer.models import ReviewAnalysisResult
@@ -85,6 +85,8 @@ class ReviewDetailResponse(BaseModel):
     is_safe_prompt: bool
     flags: List[str] = Field(default_factory=list)
     rules_applied_count: int = 0
+    feedback: Optional[Dict[str, Any]] = None
+    session_id: Optional[str] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

@@ -16,10 +16,12 @@ from app.security.sanitizer import CodeSanitizer
 from app.security.prompt_guard import PromptGuard
 from app.reviewer.engine import BaseReviewEngine, get_review_engine
 from app.analytics.service import HistoricalLearningService, get_historical_learning_service
+from app.storage.service import StorageService, get_storage_service
+from app.storage.models import ReviewDocument
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
-# In-memory submission store for gateway stage (persisted in Firestore in Feature 5)
+# In-memory submission store for fast fallback
 _review_store: Dict[str, Dict[str, Any]] = {}
 
 
@@ -49,6 +51,7 @@ async def submit_code_for_review(
     guard: PromptGuard = Depends(get_prompt_guard),
     engine: BaseReviewEngine = Depends(get_review_engine),
     learning_service: HistoricalLearningService = Depends(get_historical_learning_service),
+    storage_service: StorageService = Depends(get_storage_service),
 ) -> ReviewSubmissionResponse:
     settings = get_settings()
 
@@ -125,6 +128,27 @@ async def submit_code_for_review(
         rules_applied_count=len(prompt_rules),
     )
 
+    review_doc = ReviewDocument(
+        review_id=review_id,
+        user_id=user.user_id,
+        submitted_by=user.email,
+        submitted_at=submitted_at,
+        status=review_status,
+        filename=submission.filename,
+        language=submission.language,
+        original_line_count=sanitization_result.original_line_count,
+        sanitized_code=sanitization_result.sanitized_code,
+        secured_prompt=guard_result.secured_prompt,
+        redactions=[r.model_dump() for r in redaction_summaries],
+        risk_score=guard_result.risk_score,
+        is_safe_prompt=guard_result.is_safe,
+        flags=guard_result.flags,
+        rules_applied_count=len(prompt_rules),
+        analysis=analysis.model_dump() if analysis else None,
+    )
+
+    await storage_service.save_review(review_doc)
+
     record = {
         "review_id": review_id,
         "status": review_status,
@@ -171,7 +195,36 @@ async def submit_code_for_review(
 async def get_review_submission(
     review_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
+    storage_service: StorageService = Depends(get_storage_service),
 ) -> ReviewDetailResponse:
+    # First check persistent Firestore
+    doc = await storage_service.get_review(review_id)
+    if doc:
+        if not user.is_reviewer_or_above and user.user_id != doc.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden: you can only view your own review submissions",
+            )
+        return ReviewDetailResponse(
+            review_id=doc.review_id,
+            status=doc.status,
+            submitted_by=doc.submitted_by,
+            submitted_at=doc.submitted_at,
+            filename=doc.filename,
+            language=doc.language,
+            original_line_count=doc.original_line_count,
+            redactions_count=len(doc.redactions),
+            sanitized_code=doc.sanitized_code,
+            risk_score=doc.risk_score,
+            is_safe_prompt=doc.is_safe_prompt,
+            flags=doc.flags,
+            rules_applied_count=doc.rules_applied_count,
+            feedback=doc.feedback.model_dump() if doc.feedback else None,
+            session_id=doc.session_id,
+            analysis=doc.analysis,
+        )
+
+    # In-memory fallback
     record = _review_store.get(review_id)
     if not record:
         raise HTTPException(
@@ -179,7 +232,6 @@ async def get_review_submission(
             detail=f"Review submission '{review_id}' not found",
         )
 
-    # Developers can view their own reviews; reviewers/admins can view all
     if not user.is_reviewer_or_above and user.user_id != record["user_id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
