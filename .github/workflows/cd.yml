@@ -101,9 +101,17 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE_TAG }}
-          flags: "--allow-unauthenticated --traffic=100"
+          flags: "--allow-unauthenticated"
+
+      - name: Display Live Service URL
+        run: |
+          echo "=============================================="
+          echo "🚀 Code Sarathi deployed successfully!"
+          echo "Live URL: ${{ steps.deploy.outputs.url }}"
+          echo "=============================================="
