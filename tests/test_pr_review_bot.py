@@ -18,7 +18,7 @@ def test_detect_language_from_diff():
     assert detect_language_from_diff(py_diff) == "python"
 
     ts_diff = "+++ b/web/src/App.tsx\n+const a = 1;"
-    assert detect_language_from_diff(ts_diff) == "python"  # fallback if tsx not in basic map, or:
+    assert detect_language_from_diff(ts_diff) == "typescript"
     
     go_diff = "+++ b/pkg/server/main.go\n+package main"
     assert detect_language_from_diff(go_diff) == "go"

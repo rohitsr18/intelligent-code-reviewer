@@ -50,30 +50,13 @@ def get_git_diff(base_ref: Optional[str] = None, staged_only: bool = False) -> s
         return ""
 
 
+from app.reviewer.language_detector import LanguageDetector
+
+
 def detect_language_from_diff(diff_text: str) -> str:
-    """Infers primary language from file paths in the git diff."""
-    extension_map = {
-        ".py": "python",
-        ".js": "javascript",
-        ".ts": "typescript",
-        ".go": "go",
-        ".java": "java",
-        ".rs": "rust",
-        ".cpp": "cpp",
-        ".c": "c",
-        ".sql": "sql",
-        "dockerfile": "dockerfile",
-        ".yaml": "yaml",
-        ".yml": "yaml",
-        ".sh": "shell",
-    }
-    for line in diff_text.splitlines():
-        if line.startswith("+++ b/"):
-            filename = line[6:].strip().lower()
-            for ext, lang in extension_map.items():
-                if filename.endswith(ext):
-                    return lang
-    return "python"
+    """Infers primary language from diff file paths, shebangs, or code syntax heuristics."""
+    detector = LanguageDetector()
+    return detector.detect(diff_text).detected_language
 
 
 def analyze_diff_remotely(

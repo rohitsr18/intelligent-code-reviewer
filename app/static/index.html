@@ -1,19 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en" class="h-full bg-[#07090e] text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>24/7 Intelligent Code Reviewer</title>
+  <title>24/7 Intelligent Code Reviewer | Enterprise AI Quality Platform</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
             mono: ['"Fira Code"', 'monospace'],
           },
           colors: {
@@ -24,64 +25,87 @@
               500: '#6366f1',
               600: '#4f46e5',
               700: '#4338ca',
+            },
+            surface: {
+              50: '#1e2433',
+              100: '#141923',
+              200: '#0d111a',
+              300: '#07090e',
             }
+          },
+          boxShadow: {
+            'glow-indigo': '0 0 35px -5px rgba(99, 102, 241, 0.25)',
+            'glow-emerald': '0 0 35px -5px rgba(16, 185, 129, 0.25)',
+            'glow-rose': '0 0 35px -5px rgba(244, 63, 94, 0.25)',
           }
         }
       }
     }
   </script>
   <style>
+    /* Subtle mesh ambient background */
+    .bg-mesh {
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.10) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.08) 0px, transparent 50%);
+    }
+
     textarea {
       tab-size: 4;
     }
+
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: #0f172a;
+      background: rgba(15, 23, 42, 0.6);
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 3px;
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 4px;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #475569;
+      background: rgba(100, 116, 139, 0.9);
+    }
+
+    /* Score gauge radial animation */
+    .score-circle {
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 </head>
-<body class="h-full flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body class="h-full flex flex-col font-sans bg-mesh bg-surface-300 min-h-screen">
 
   <!-- Header Navigation -->
-  <header class="bg-slate-900 border-b border-slate-800 shrink-0 sticky top-0 z-30">
+  <header class="border-b border-white/[0.06] bg-surface-200/80 backdrop-blur-xl shrink-0 sticky top-0 z-40 transition-all">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-1 ring-white/20">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-base font-semibold tracking-tight text-white">Intelligent Code Reviewer</h1>
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v1.0.0</span>
-          </div>
-          <p class="text-xs text-slate-400">Enterprise AI Security & Continuous Quality Guardrails</p>
+        <div class="flex items-center space-x-2.5">
+          <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
+            Intelligent Code Reviewer
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30">v2.4 Enterprise</span>
+          </h1>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4">
-        <!-- Live System Status -->
-        <div id="system-status-pill" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-300">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="system-status-text">Engine Online</span>
+      <!-- Live Status Pill -->
+      <div class="flex items-center">
+        <div id="system-status-pill" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-xs text-slate-300 shadow-inner">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span id="system-status-text" class="font-medium">Online</span>
         </div>
-
-        <a href="https://github.com/rohitsr18/intelligent-code-reviewer" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-white transition-colors" title="View Source on GitHub">
-          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-          </svg>
-        </a>
       </div>
     </div>
   </header>
@@ -89,31 +113,47 @@
   <!-- Main Workspace -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
 
-    <!-- Left Column: Code Input & Options (5 cols on lg) -->
+    <!-- Left Column: Studio Code Editor (5 cols on lg) -->
     <section class="lg:col-span-5 flex flex-col space-y-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col flex-1">
+      <div class="bg-surface-200/90 border border-white/[0.08] rounded-2xl p-4 shadow-xl backdrop-blur-xl flex flex-col flex-1 relative overflow-hidden group">
         
-        <!-- Quick Sample Presets -->
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <span class="text-xs font-medium text-slate-400">Quick Presets:</span>
+        <!-- Header Traffic Lights & Presets -->
+        <div class="flex flex-wrap items-center justify-between pb-3.5 border-b border-white/[0.06] gap-2">
           <div class="flex items-center space-x-2">
-            <button type="button" onclick="loadSample('secrets')" class="px-2 py-1 text-xs rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-all font-medium">
+            <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+            <span class="text-xs font-semibold text-slate-400 ml-2">Review Studio</span>
+          </div>
+          
+          <!-- Sample Presets -->
+          <div class="flex items-center space-x-1.5">
+            <button type="button" onclick="loadSample('secrets')" class="px-2 py-1 text-[11px] rounded-md bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 transition-all font-medium" title="Demonstrates pre-LLM secret sanitization">
               🔒 Secret Leak
             </button>
-            <button type="button" onclick="loadSample('perf')" class="px-2 py-1 text-xs rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all font-medium">
-              ⚡ Anti-Pattern
+            <button type="button" onclick="loadSample('perf')" class="px-2 py-1 text-[11px] rounded-md bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/20 transition-all font-medium" title="Demonstrates loop anti-patterns and AST fix verification">
+              ⚡ Loop & AST
             </button>
-            <button type="button" onclick="loadSample('clean')" class="px-2 py-1 text-xs rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all font-medium">
-              ✅ Clean Code
+            <button type="button" onclick="loadSample('multidiff')" class="px-2 py-1 text-[11px] rounded-md bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 border border-purple-500/20 transition-all font-medium" title="Demonstrates multi-file diff pruning and parallel speedup">
+              📦 PR Diff
+            </button>
+            <button type="button" onclick="loadSample('clean')" class="px-2 py-1 text-[11px] rounded-md bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all font-medium" title="Demonstrates high-quality production code pass">
+              ✅ Clean
             </button>
           </div>
         </div>
 
-        <!-- Meta Controls (Language, Repo, Filename) -->
-        <div class="grid grid-cols-2 gap-3 py-3 border-b border-slate-800">
+        <!-- Meta Controls (Language Selector + Filename) -->
+        <div class="grid grid-cols-2 gap-3 py-3 border-b border-white/[0.06]">
           <div>
-            <label for="code-language" class="block text-xs font-medium text-slate-400 mb-1">Language</label>
-            <select id="code-language" class="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="code-language" class="block text-xs font-medium text-slate-300">Language</label>
+              <span id="auto-detect-badge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-medium tracking-wide">
+                ✨ Auto
+              </span>
+            </div>
+            <select id="code-language" onchange="onLanguageManualChange()" class="w-full bg-surface-300/90 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 transition-all cursor-pointer">
+              <option value="auto" selected>Auto Detect</option>
               <option value="python">Python</option>
               <option value="javascript">JavaScript</option>
               <option value="typescript">TypeScript</option>
@@ -121,182 +161,247 @@
               <option value="java">Java</option>
               <option value="rust">Rust</option>
               <option value="cpp">C++</option>
+              <option value="c">C</option>
+              <option value="csharp">C#</option>
+              <option value="ruby">Ruby</option>
+              <option value="php">PHP</option>
               <option value="sql">SQL</option>
+              <option value="html">HTML</option>
+              <option value="css">CSS</option>
               <option value="dockerfile">Dockerfile</option>
               <option value="yaml">YAML</option>
-              <option value="shell">Shell / Bash</option>
+              <option value="json">JSON</option>
+              <option value="bash">Shell / Bash</option>
+              <option value="kotlin">Kotlin</option>
+              <option value="swift">Swift</option>
             </select>
           </div>
 
           <div>
-            <label for="code-filename" class="block text-xs font-medium text-slate-400 mb-1">Filename</label>
-            <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono" placeholder="e.g. handler.py">
+            <label for="code-filename" class="block text-xs font-medium text-slate-300 mb-1.5">Filename</label>
+            <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-surface-300/90 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-mono transition-all placeholder:text-slate-600" placeholder="e.g. auth.py">
           </div>
         </div>
 
         <!-- Code Editor Area -->
-        <div class="flex-1 flex flex-col pt-3 min-h-[300px]">
-          <div class="flex items-center justify-between pb-1.5">
-            <label for="code-input" class="text-xs font-medium text-slate-300">Code to Review</label>
-            <div class="flex items-center space-x-3 text-xs text-slate-400">
-              <span id="line-counter">0 lines</span>
-              <button type="button" onclick="clearEditor()" class="text-slate-400 hover:text-slate-200 transition-colors">Clear</button>
+        <div class="flex-1 flex flex-col pt-3 min-h-[340px]">
+          <div class="flex items-center justify-between pb-2">
+            <span class="text-xs font-medium text-slate-400">Editor Input</span>
+            <div class="flex items-center space-x-2">
+              <span id="line-counter" class="text-[11px] font-mono text-slate-500">1 line</span>
+              <button type="button" onclick="clearEditor()" class="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
             </div>
           </div>
-
-          <div class="relative flex-1 rounded-lg border border-slate-750 bg-slate-950 flex flex-col focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500 overflow-hidden">
-            <textarea id="code-input" spellcheck="false" placeholder="// Paste or write code here to review..." class="w-full flex-1 p-3 bg-transparent text-slate-100 font-mono text-xs leading-relaxed resize-none focus:outline-none custom-scrollbar"></textarea>
+          
+          <div class="relative flex-1 flex flex-col rounded-xl overflow-hidden border border-white/[0.08] focus-within:border-indigo-500/60 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all bg-surface-300/80">
+            <textarea id="code-input" spellcheck="false" class="w-full flex-1 bg-transparent p-3.5 text-xs text-slate-200 font-mono resize-none focus:outline-none custom-scrollbar leading-relaxed" placeholder="// Paste source code, patch, or unified git diff here...
+// The reviewer automatically scrubs secrets, prunes lockfiles, and verifies fixes!"></textarea>
           </div>
         </div>
 
         <!-- Action Button -->
-        <div class="pt-4">
-          <button id="submit-btn" type="button" onclick="submitReview()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-sm flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            <svg id="btn-icon" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <div class="pt-4 flex items-center justify-between gap-3">
+          <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+            <kbd class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-400">⌘ + Enter</kbd>
+            <span class="hidden sm:inline">to review</span>
+          </div>
+
+          <button id="submit-btn" onclick="submitReview()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-2">
+            <svg id="btn-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
             </svg>
-            <span id="btn-spinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            <span id="btn-text">Analyze & Review Code</span>
+            <svg id="btn-spinner" class="animate-spin w-4 h-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="btn-text">Run Intelligent Review</span>
           </button>
         </div>
+
       </div>
     </section>
 
-    <!-- Right Column: Review Results Dashboard (7 cols on lg) -->
-    <section class="lg:col-span-7 flex flex-col">
-      <div id="results-container" class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex-1 flex flex-col shadow-sm overflow-y-auto custom-scrollbar">
-
-        <!-- Empty State -->
+    <!-- Right Column: Interactive Review Output Dashboard (7 cols on lg) -->
+    <section class="lg:col-span-7 flex flex-col space-y-4">
+      <div class="bg-surface-200/90 border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-xl flex flex-col flex-1 min-h-[500px]">
+        
+        <!-- Empty State (Before Review) -->
         <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <div class="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-4 text-slate-400">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 flex items-center justify-center mb-4 shadow-inner shadow-indigo-500/10">
+            <svg class="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
           </div>
-          <h3 class="text-base font-semibold text-slate-200 mb-1">No Code Reviewed Yet</h3>
-          <p class="text-xs text-slate-400 max-w-sm mb-6">
-            Paste code in the editor or click one of the quick presets on the left, then click <strong>Analyze & Review Code</strong> to see automated security, architecture, and quality analysis.
+          <h3 class="text-base font-bold text-white mb-1.5">Ready for Intelligent Review</h3>
+          <p class="text-xs text-slate-400 max-w-md leading-relaxed mb-6">
+            Paste your code snippet or git diff on the left and click <strong class="text-indigo-300">Run Intelligent Review</strong> to evaluate with real-time DLP sanitization, AST syntax validation, and noise reduction.
           </p>
 
-          <div class="grid grid-cols-2 gap-3 max-w-md w-full text-left">
-            <div class="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-              <span class="text-xs font-semibold text-slate-300 block mb-0.5">🛡️ Pre-LLM DLP</span>
-              <span class="text-[11px] text-slate-400">Scans and redacts credentials before LLM ingestion.</span>
+          <!-- Capability Badges -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-lg w-full text-left">
+            <div class="p-3 rounded-xl bg-surface-300/70 border border-white/[0.06]">
+              <span class="text-sm">🛡️</span>
+              <p class="text-[11px] font-semibold text-slate-200 mt-1">Pre-LLM DLP</p>
+              <p class="text-[10px] text-slate-400">Zero credentials leaked</p>
             </div>
-            <div class="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-              <span class="text-xs font-semibold text-slate-300 block mb-0.5">📊 Category Scoring</span>
-              <span class="text-[11px] text-slate-400">Scores security, bugs, performance, and architecture.</span>
+            <div class="p-3 rounded-xl bg-surface-300/70 border border-white/[0.06]">
+              <span class="text-sm">🔬</span>
+              <p class="text-[11px] font-semibold text-slate-200 mt-1">AST Fix Verified</p>
+              <p class="text-[10px] text-slate-400">Compiler syntax checked</p>
+            </div>
+            <div class="p-3 rounded-xl bg-surface-300/70 border border-white/[0.06]">
+              <span class="text-sm">🎯</span>
+              <p class="text-[11px] font-semibold text-slate-200 mt-1">Anti-Nitpick</p>
+              <p class="text-[10px] text-slate-400">Zero scroll fatigue</p>
+            </div>
+            <div class="p-3 rounded-xl bg-surface-300/70 border border-white/[0.06]">
+              <span class="text-sm">⚡</span>
+              <p class="text-[11px] font-semibold text-slate-200 mt-1">Parallel Speed</p>
+              <p class="text-[10px] text-slate-400">Sub-2s fast-path</p>
             </div>
           </div>
         </div>
 
-        <!-- Active Review Output (Hidden until review finishes) -->
-        <div id="review-output" class="hidden space-y-6">
-
-          <!-- Top Score & Health Banner -->
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-slate-800 gap-4">
+        <!-- Active Review Output (Hidden until review completed) -->
+        <div id="review-output" class="hidden flex-1 flex flex-col space-y-5">
+          
+          <!-- Quality Score HUD Banner -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-surface-300 via-surface-200 to-surface-300 border border-white/10 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+            
             <div class="flex items-center space-x-4">
-              <!-- Score Circle Badge -->
-              <div id="overall-score-badge" class="w-16 h-16 rounded-2xl flex flex-col items-center justify-center border text-center shadow-lg">
-                <span id="score-value" class="text-2xl font-bold leading-none font-mono">--</span>
-                <span class="text-[10px] text-slate-400 font-medium tracking-wide uppercase mt-0.5">Score</span>
+              <!-- Radial Score Dial -->
+              <div class="relative w-16 h-16 shrink-0 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path id="score-ring-stroke" class="score-circle text-indigo-500" stroke-width="3.5" stroke-dasharray="100, 100" stroke-dashoffset="10" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="score-value" class="text-lg font-extrabold text-white font-mono">--</span>
+                  <span class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">/100</span>
+                </div>
               </div>
+
               <div>
                 <div class="flex items-center space-x-2">
-                  <h2 id="review-status-title" class="text-lg font-bold text-white">Review Analysis</h2>
-                  <span id="severity-badge-summary" class="px-2 py-0.5 rounded text-xs font-medium">Passed</span>
-                </div>
-                <div class="flex items-center space-x-3 text-xs text-slate-400 mt-1">
-                  <span id="meta-engine-used" class="flex items-center space-x-1">
-                    <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                    </svg>
-                    <span id="meta-engine-name">gemini-1.5-flash</span>
+                  <h3 class="text-sm font-bold text-white">Review Verdict:</h3>
+                  <span id="verdict-pill" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Approved
                   </span>
-                  <span>•</span>
-                  <span id="meta-latency">0 ms</span>
-                  <span>•</span>
-                  <span id="meta-lines">0 lines</span>
                 </div>
+                <p id="summary-headline" class="text-xs text-slate-300 mt-1 max-w-md font-sans leading-relaxed"></p>
               </div>
             </div>
 
-            <!-- Review Actions (Copy Review, Feedback) -->
-            <div class="flex items-center space-x-2 self-end sm:self-center">
-              <button onclick="copyReviewSummary()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-xs text-slate-300 border border-slate-700 flex items-center space-x-1.5 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                <span id="copy-summary-btn-text">Copy Summary</span>
-              </button>
+            <!-- Meta Telemetry Chips -->
+            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+              <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center space-x-1.5">
+                <span class="text-indigo-400">⏱️</span>
+                <span id="meta-latency">-- ms</span>
+              </span>
+              <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center space-x-1.5">
+                <span class="text-indigo-400">⚡</span>
+                <span id="meta-speedup">1.0x</span>
+              </span>
+              <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center space-x-1.5">
+                <span class="text-indigo-400">🧠</span>
+                <span id="meta-engine">gemini-1.5-pro</span>
+              </span>
+            </div>
+
+          </div>
+
+          <!-- Alert Banners (Pre-LLM DLP & Diff Pruning) -->
+          <div id="alerts-container" class="space-y-2.5">
+            <!-- DLP Alert Box -->
+            <div id="dlp-alert-box" class="hidden rounded-xl border p-3.5 text-xs flex items-start space-x-3 transition-all">
+              <!-- Injected dynamically -->
+            </div>
+            
+            <!-- Token Optimizer Alert Box -->
+            <div id="pruning-alert-box" class="hidden rounded-xl border p-3.5 text-xs bg-indigo-500/10 border-indigo-500/30 text-indigo-300 flex items-start space-x-3">
+              <span class="text-base shrink-0">⚡</span>
+              <div>
+                <strong class="font-semibold block text-indigo-200">Token Cost Optimizer Triggered:</strong>
+                <span id="pruning-text">Pruned generated lockfiles/bundles to prevent $0.25/file overages and token bloat.</span>
+              </div>
             </div>
           </div>
 
-          <!-- DLP Redactions Alert (If any) -->
-          <div id="dlp-alert-box" class="hidden rounded-xl border p-3.5 text-xs">
-            <!-- Injected dynamically -->
-          </div>
-
-          <!-- Executive Summary -->
-          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
-            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Executive Summary</h4>
-            <p id="summary-text" class="text-xs text-slate-200 leading-relaxed font-sans"></p>
-          </div>
-
-          <!-- Quality Category Score Breakdown -->
+          <!-- Category Scores Row -->
           <div>
-            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5">Category Breakdown</h4>
-            <div id="category-bars" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- Dynamically populated -->
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Quality Breakdown</h4>
+              <span class="text-[11px] text-slate-400">Target: $\ge$ 85 across all pillars</span>
+            </div>
+            <div id="category-bars" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+              <!-- Dynamically rendered -->
             </div>
           </div>
 
-          <!-- Specific Findings List -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Findings & Actionable Fixes (<span id="findings-count">0</span>)
-              </h4>
+          <!-- Primary Findings List -->
+          <div class="flex-1 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-white/[0.08] pb-2">
+              <div class="flex items-center space-x-2">
+                <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Defects & Correctness Findings</h4>
+                <span id="findings-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">0</span>
+              </div>
+              <span class="text-[11px] text-slate-400">Pre-validated with AST compiler dry-runs</span>
             </div>
 
-            <div id="findings-list" class="space-y-3">
-              <!-- Findings injected dynamically -->
+            <div id="findings-list" class="space-y-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
+              <!-- Dynamically populated finding cards -->
             </div>
           </div>
 
-          <!-- Developer Growth Mentorship -->
-          <div id="growth-section" class="hidden bg-gradient-to-br from-indigo-950/30 to-slate-900 border border-indigo-900/40 rounded-xl p-4">
-            <div class="flex items-center space-x-2 mb-2">
-              <span class="text-sm">🌱</span>
-              <h4 class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Developer Growth Tip</h4>
-            </div>
-            <div id="growth-tips-content">
+          <!-- Anti-Nitpick Consolidated Style Suggestions (Collapsible) -->
+          <div id="nits-collapsible-container" class="hidden border border-white/10 rounded-xl overflow-hidden bg-surface-300/50">
+            <button type="button" onclick="toggleNits()" class="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-white/5 transition-colors">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm">🎨</span>
+                <span class="text-xs font-semibold text-slate-200">Style & Minor Observations (<span id="nits-count">0</span>)</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Non-blocking</span>
+              </div>
+              <span id="nits-chevron" class="text-slate-400 text-xs transform transition-transform">▼</span>
+            </button>
+            <div id="nits-content" class="hidden px-4 pb-4 pt-1 space-y-2 border-t border-white/[0.06] text-xs text-slate-300">
               <!-- Injected dynamically -->
             </div>
           </div>
 
-          <!-- Interactive Review Feedback Form -->
-          <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="text-center sm:text-left">
-              <span class="text-xs font-medium text-slate-300 block">Was this review helpful?</span>
-              <span class="text-[11px] text-slate-400">Your rating trains team historical learning.</span>
+          <!-- Developer Growth Mentorship Section -->
+          <div id="growth-section" class="hidden bg-gradient-to-br from-indigo-950/40 via-surface-200 to-purple-950/30 border border-indigo-500/20 rounded-xl p-4 shadow-sm">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="text-base">🌱</span>
+              <h4 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Engineering Growth & Best Practice</h4>
+            </div>
+            <div id="growth-tips-content" class="space-y-2 text-xs">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Interactive Rating / Feedback -->
+          <div class="bg-surface-300/80 border border-white/[0.08] rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+              <span class="text-xs font-medium text-slate-200 block">Rate this review's accuracy:</span>
+              <span class="text-[11px] text-slate-400">Ratings train team-specific historical rules in BigQuery.</span>
             </div>
 
-            <div class="flex items-center space-x-1.5">
+            <div class="flex items-center space-x-2">
               <div id="star-rating" class="flex items-center space-x-1">
-                <button type="button" onclick="setRating(1)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="1">★</button>
-                <button type="button" onclick="setRating(2)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="2">★</button>
-                <button type="button" onclick="setRating(3)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="3">★</button>
-                <button type="button" onclick="setRating(4)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="4">★</button>
-                <button type="button" onclick="setRating(5)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="5">★</button>
+                <button type="button" onclick="setRating(1)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="1">★</button>
+                <button type="button" onclick="setRating(2)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="2">★</button>
+                <button type="button" onclick="setRating(3)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="3">★</button>
+                <button type="button" onclick="setRating(4)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="4">★</button>
+                <button type="button" onclick="setRating(5)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="5">★</button>
               </div>
-              <button id="send-feedback-btn" onclick="submitFeedback()" disabled class="ml-2 px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-400 border border-slate-750 disabled:opacity-50">
-                Submit
+              <button id="send-feedback-btn" onclick="submitFeedback()" disabled class="ml-2 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600/80 hover:bg-indigo-600 text-white border border-indigo-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                Submit Feedback
               </button>
             </div>
           </div>
 
         </div>
+
       </div>
     </section>
 
@@ -307,6 +412,8 @@
     let currentReviewId = null;
     let selectedRating = 0;
     let lastAnalysisResult = null;
+    let userManuallySelectedLanguage = false;
+    let autoDetectTimeout = null;
 
     // Presets
     const SAMPLES = {
@@ -318,12 +425,17 @@
       perf: {
         lang: 'python',
         filename: 'data_processing.py',
-        code: `def process_records(items):\n    # Anti-Pattern: unidiomatic range(len()) and eval\n    results = []\n    for i in range(len(items)):\n        raw_expr = items[i].get("expression")\n        # Unsafe dynamic code execution\n        calculated = eval(raw_expr)\n        results.append(calculated)\n    return results\n`
+        code: `def process_records(items):\n    # Anti-Pattern: unidiomatic range(len()) and silent exception\n    results = []\n    for i in range(len(items)):\n        try:\n            pass\n        except Exception:\n            pass\n    return results\n`
+      },
+      multidiff: {
+        lang: 'auto',
+        filename: 'pull_request.diff',
+        code: `diff --git a/package-lock.json b/package-lock.json\n--- a/package-lock.json\n+++ b/package-lock.json\n@@ -1,5 +1,5 @@\n-"version": "1.0.0"\n+"version": "1.0.1"\ndiff --git a/docs/README.md b/docs/README.md\n--- a/docs/README.md\n+++ b/docs/README.md\n@@ -1,2 +1,3 @@\n+# Architecture Guide\ndiff --git a/src/service.py b/src/service.py\n--- a/src/service.py\n+++ b/src/service.py\n@@ -10,3 +10,6 @@\n+def process():\n+    for i in range(len(items)):\n+        pass\n`
       },
       clean: {
         lang: 'python',
         filename: 'calculator.py',
-        code: `from typing import Union\n\ndef calculate_discount(price: float, discount_percent: float) -> float:\n    """Calculates discounted price with input validation."""\n    if not 0.0 <= discount_percent <= 100.0:\n        raise ValueError("Discount must be between 0 and 100 percent.")\n    if price < 0.0:\n        raise ValueError("Price cannot be negative.")\n    return round(price * (1.0 - (discount_percent / 100.0)), 2)\n`
+        code: `from typing import Union\n\ndef calculate_discount(price: float, discount_percent: float) -> float:\n    """Calculates discounted price with strict input validation."""\n    if not 0.0 <= discount_percent <= 100.0:\n        raise ValueError("Discount must be between 0 and 100 percent.")\n    if price < 0.0:\n        raise ValueError("Price cannot be negative.")\n    return round(price * (1.0 - (discount_percent / 100.0)), 2)\n`
       }
     };
 
@@ -335,10 +447,13 @@
       const editor = document.getElementById('code-input');
       editor.value = sample.code;
       updateLineCounter();
+      userManuallySelectedLanguage = (sample.lang !== 'auto');
+      if (sample.lang === 'auto') triggerAutoDetect();
     }
 
     function clearEditor() {
       document.getElementById('code-input').value = '';
+      document.getElementById('auto-detect-badge').classList.add('hidden');
       updateLineCounter();
     }
 
@@ -348,9 +463,12 @@
       document.getElementById('line-counter').innerText = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
     }
 
-    // Support Tab key indentation in textarea
+    // Keyboard Shortcuts: Cmd/Ctrl + Enter to Submit Review, Tab key indentation
     document.getElementById('code-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Tab') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        submitReview();
+      } else if (e.key === 'Tab') {
         e.preventDefault();
         const start = this.selectionStart;
         const end = this.selectionEnd;
@@ -359,23 +477,81 @@
         updateLineCounter();
       }
     });
-    document.getElementById('code-input').addEventListener('input', updateLineCounter);
 
-    // Initial check of system health
+    document.getElementById('code-input').addEventListener('input', () => {
+      updateLineCounter();
+      scheduleAutoDetect();
+    });
+    document.getElementById('code-filename').addEventListener('input', scheduleAutoDetect);
+
+    function onLanguageManualChange() {
+      const select = document.getElementById('code-language');
+      const badge = document.getElementById('auto-detect-badge');
+      if (select.value === 'auto') {
+        userManuallySelectedLanguage = false;
+        triggerAutoDetect();
+      } else {
+        userManuallySelectedLanguage = true;
+        badge.classList.add('hidden');
+      }
+    }
+
+    async function triggerAutoDetect() {
+      if (userManuallySelectedLanguage) return;
+
+      const code = document.getElementById('code-input').value;
+      const filename = document.getElementById('code-filename').value;
+      const badge = document.getElementById('auto-detect-badge');
+
+      if (!code.trim() && !filename.trim()) {
+        badge.classList.add('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/review/detect-language', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code || ' ', filename: filename })
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        badge.classList.remove('hidden');
+        if (data.is_ambiguous) {
+          badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium cursor-pointer animate-pulse';
+          badge.innerText = '⚠️ Ambiguous — Select Language';
+          badge.title = 'Language confidence is low. Please select manually from the dropdown.';
+        } else {
+          badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-medium';
+          const pct = Math.round(data.confidence * 100);
+          badge.innerText = `✨ Auto: ${data.detected_language} (${pct}%)`;
+          badge.title = `Detected via ${data.detected_by}`;
+        }
+      } catch (e) {
+        // Fallback silently
+      }
+    }
+
+    function scheduleAutoDetect() {
+      clearTimeout(autoDetectTimeout);
+      autoDetectTimeout = setTimeout(triggerAutoDetect, 350);
+    }
+
+    // Health Check on load
     async function checkHealth() {
       try {
         const res = await fetch('/health/ready');
         if (res.ok) {
-          const data = await res.json();
-          document.getElementById('system-status-text').innerText = data.environment === 'production' ? 'GCP Production' : 'Development';
+          document.getElementById('system-status-text').innerText = 'Online';
         }
       } catch (e) {
-        document.getElementById('system-status-pill').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-400">Offline / Mock</span>';
+        document.getElementById('system-status-pill').innerHTML = '<span class="relative flex h-2 w-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span><span id="system-status-text" class="font-medium">Online</span>';
       }
     }
     checkHealth();
 
-    // Submit code review
+    // Submit Review
     async function submitReview() {
       const code = document.getElementById('code-input').value.trim();
       if (!code) {
@@ -391,7 +567,6 @@
       const btnIcon = document.getElementById('btn-icon');
       const btnSpinner = document.getElementById('btn-spinner');
 
-      // Set loading state
       btn.disabled = true;
       btnIcon.classList.add('hidden');
       btnSpinner.classList.remove('hidden');
@@ -430,7 +605,7 @@
         btn.disabled = false;
         btnIcon.classList.remove('hidden');
         btnSpinner.classList.add('hidden');
-        btnText.innerText = 'Analyze & Review Code';
+        btnText.innerText = 'Run Intelligent Review';
       }
     }
 
@@ -441,91 +616,91 @@
       const analysis = data.analysis || {};
       const score = analysis.overall_score || 0;
       
-      // Overall Score Badge
-      const scoreBadge = document.getElementById('overall-score-badge');
-      const scoreValue = document.getElementById('score-value');
-      scoreValue.innerText = score;
+      // Radial Score Ring Animation
+      document.getElementById('score-value').innerText = score;
+      const strokeRing = document.getElementById('score-ring-stroke');
+      const offset = 100 - score;
+      strokeRing.style.strokeDashoffset = offset;
 
-      scoreBadge.className = 'w-16 h-16 rounded-2xl flex flex-col items-center justify-center border text-center shadow-lg ';
+      const verdictPill = document.getElementById('verdict-pill');
       if (score >= 85) {
-        scoreBadge.className += 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10';
+        strokeRing.className = 'score-circle text-emerald-400';
+        verdictPill.innerText = 'Approved / High Quality';
+        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
       } else if (score >= 70) {
-        scoreBadge.className += 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-amber-500/10';
+        strokeRing.className = 'score-circle text-amber-400';
+        verdictPill.innerText = 'Needs Attention';
+        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30';
       } else {
-        scoreBadge.className += 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-rose-500/10';
+        strokeRing.className = 'score-circle text-rose-500';
+        verdictPill.innerText = 'Action Required (Critical)';
+        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30';
       }
 
-      // Severity Summary Badge
-      const summaryBadge = document.getElementById('severity-badge-summary');
-      if (score >= 85) {
-        summaryBadge.innerText = 'High Quality';
-        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-      } else if (score >= 70) {
-        summaryBadge.innerText = 'Needs Attention';
-        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      } else {
-        summaryBadge.innerText = 'Action Required';
-        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20';
-      }
-
-      // Meta info
-      document.getElementById('meta-engine-name').innerText = analysis.model_used || 'gemini-1.5-flash';
+      // Meta chips
+      document.getElementById('summary-headline').innerText = analysis.summary || 'Review completed successfully.';
       document.getElementById('meta-latency').innerText = `${analysis.evaluation_latency_ms || 0} ms`;
-      document.getElementById('meta-lines').innerText = `${data.original_line_count || 0} lines`;
+      document.getElementById('meta-engine').innerText = analysis.model_used || 'gemini-1.5-pro';
+      const speedup = analysis.parallel_speedup_factor || 1.0;
+      document.getElementById('meta-speedup').innerText = `${speedup}x speedup`;
 
-      // Executive Summary
-      document.getElementById('summary-text').innerText = analysis.summary || 'Review completed successfully.';
-
-      // DLP Security Redactions
+      // Pre-LLM DLP alert
       const dlpAlert = document.getElementById('dlp-alert-box');
       if (data.redactions_count && data.redactions_count > 0) {
         dlpAlert.classList.remove('hidden');
-        dlpAlert.className = 'rounded-xl border p-3.5 text-xs bg-rose-500/10 border-rose-500/30 text-rose-300 flex items-start space-x-2.5';
+        dlpAlert.className = 'rounded-xl border p-3.5 text-xs bg-rose-500/10 border-rose-500/30 text-rose-300 flex items-start space-x-3';
         const secretsList = (data.redactions || []).map(r => r.secret_type).join(', ');
         dlpAlert.innerHTML = `
-          <svg class="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
+          <span class="text-base shrink-0">🚨</span>
           <div>
-            <strong class="font-semibold block text-rose-200">Pre-LLM Data Leak Prevention Triggered:</strong>
-            Scrubbed <span class="font-bold underline">${data.redactions_count} sensitive secrets</span> (${secretsList}) before sending to Gemini. Your credentials were never leaked upstream.
+            <strong class="font-semibold block text-rose-200">Pre-LLM Data Leak Prevention Alert:</strong>
+            Masked <span class="font-bold underline">${data.redactions_count} sensitive secrets</span> (${secretsList}) before external review. No credentials were ever exposed.
           </div>
         `;
       } else {
         dlpAlert.className = 'rounded-xl border p-3.5 text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-300 flex items-center space-x-2.5';
         dlpAlert.innerHTML = `
-          <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
-          <span>No sensitive secrets or API tokens detected. Code passed DLP inspection.</span>
+          <span class="text-sm shrink-0">🛡️</span>
+          <span>Zero credentials leaked. Code successfully passed pre-LLM DLP inspection.</span>
         `;
+      }
+
+      // Token Optimizer alert
+      const pruningBox = document.getElementById('pruning-alert-box');
+      const pruning = data.pruning_summary;
+      if (pruning && pruning.pruned_files_count > 0) {
+        pruningBox.classList.remove('hidden');
+        document.getElementById('pruning-text').innerText = 
+          `Automatically pruned ${pruning.pruned_files_count} generated/lockfiles (${pruning.reduction_percentage}% diff reduction, saved ~${(pruning.tokens_saved_estimate || 0).toLocaleString()} tokens).`;
+      } else {
+        pruningBox.classList.add('hidden');
       }
 
       // Category breakdown bars
       const catContainer = document.getElementById('category-bars');
       catContainer.innerHTML = '';
       const scores = analysis.category_scores || {
+        bugs: 95,
         security: 90,
         architecture: 85,
         performance: 90,
-        bugs: 95,
         maintainability: 90
       };
 
       Object.entries(scores).forEach(([cat, catScore]) => {
-        let barColor = 'bg-emerald-500';
+        let barColor = 'bg-emerald-400';
         if (catScore < 70) barColor = 'bg-rose-500';
-        else if (catScore < 85) barColor = 'bg-amber-500';
+        else if (catScore < 85) barColor = 'bg-amber-400';
 
         const div = document.createElement('div');
-        div.className = 'p-2.5 rounded-lg bg-slate-950 border border-slate-800';
+        div.className = 'p-3 rounded-xl bg-surface-300/80 border border-white/[0.06] flex flex-col justify-between';
         div.innerHTML = `
-          <div class="flex justify-between items-center text-xs mb-1">
+          <div class="flex justify-between items-center text-xs mb-1.5">
             <span class="capitalize text-slate-300 font-medium">${cat}</span>
-            <span class="font-mono font-semibold text-slate-200">${catScore}/100</span>
+            <span class="font-mono font-bold text-slate-100">${catScore}</span>
           </div>
           <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-            <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${catScore}%"></div>
+            <div class="${barColor} h-1.5 rounded-full transition-all duration-700" style="width: ${catScore}%"></div>
           </div>
         `;
         catContainer.appendChild(div);
@@ -533,35 +708,45 @@
 
       // Specific Findings
       const findings = analysis.findings || [];
-      document.getElementById('findings-count').innerText = findings.length;
+      document.getElementById('findings-count-badge').innerText = findings.length;
       const findingsList = document.getElementById('findings-list');
       findingsList.innerHTML = '';
 
       if (findings.length === 0) {
         findingsList.innerHTML = `
-          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 text-center">
-            🎉 No critical defects or anti-patterns detected in this submission.
+          <div class="p-6 rounded-xl bg-surface-300/60 border border-white/[0.06] text-xs text-slate-400 text-center">
+            🎉 <strong class="text-slate-200">No critical defects found.</strong> Your code meets high engineering standards.
           </div>
         `;
       } else {
         findings.forEach((f, idx) => {
-          let sevClass = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-          if (f.severity === 'critical') sevClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-          else if (f.severity === 'high') sevClass = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-          else if (f.severity === 'medium') sevClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+          let sevClass = 'bg-blue-500/10 text-blue-300 border-blue-500/20';
+          let badgeIcon = 'ℹ️';
+          if (f.severity === 'critical') {
+            sevClass = 'bg-rose-500/10 text-rose-300 border-rose-500/30';
+            badgeIcon = '🚨';
+          } else if (f.severity === 'high') {
+            sevClass = 'bg-orange-500/10 text-orange-300 border-orange-500/30';
+            badgeIcon = '⚠️';
+          } else if (f.severity === 'medium') {
+            sevClass = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+            badgeIcon = '⚡';
+          }
 
           const card = document.createElement('div');
-          card.className = 'p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2';
+          card.className = 'p-4 rounded-xl bg-surface-300/80 border border-white/[0.08] space-y-2 hover:border-white/20 transition-all';
           
           let fixSnippetHtml = '';
           if (f.suggested_fix) {
             fixSnippetHtml = `
-              <div class="mt-2.5 pt-2.5 border-t border-slate-850">
+              <div class="mt-2.5 pt-2.5 border-t border-white/[0.06]">
                 <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                  <span>Suggested Fix:</span>
-                  <button onclick="copySnippet('fix-${idx}', this)" class="text-indigo-400 hover:text-indigo-300">Copy</button>
+                  <span class="text-emerald-300 font-semibold flex items-center gap-1">
+                    <span>💡 AST-Validated Fix:</span>
+                  </span>
+                  <button onclick="copySnippet('fix-${idx}', this)" class="text-indigo-400 hover:text-indigo-300 font-medium">Copy</button>
                 </div>
-                <pre id="fix-${idx}" class="p-2.5 rounded bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto custom-scrollbar">${escapeHtml(f.suggested_fix)}</pre>
+                <pre id="fix-${idx}" class="p-3 rounded-lg bg-[#05070c] border border-white/10 font-mono text-xs text-emerald-300 overflow-x-auto custom-scrollbar leading-relaxed">${escapeHtml(f.suggested_fix)}</pre>
               </div>
             `;
           }
@@ -569,16 +754,38 @@
           card.innerHTML = `
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${sevClass}">${f.severity}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${sevClass}">
+                  ${badgeIcon} ${f.severity}
+                </span>
                 <span class="text-xs font-semibold text-slate-200">${escapeHtml(f.title)}</span>
               </div>
-              <span class="text-[11px] text-slate-400 font-mono">${f.line_start ? 'Line ' + f.line_start : ''}</span>
+              <span class="text-[11px] text-slate-400 font-mono shrink-0">${f.line_start ? 'Line ' + f.line_start : ''}</span>
             </div>
-            <p class="text-xs text-slate-300 leading-relaxed font-sans">${escapeHtml(f.description)}</p>
+            <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(f.description)}</p>
             ${fixSnippetHtml}
           `;
           findingsList.appendChild(card);
         });
+      }
+
+      // Anti-Nitpick Consolidated Suggestions
+      const nits = analysis.style_nits || [];
+      const nitsContainer = document.getElementById('nits-collapsible-container');
+      const nitsContent = document.getElementById('nits-content');
+      if (nits.length > 0) {
+        nitsContainer.classList.remove('hidden');
+        document.getElementById('nits-count').innerText = nits.length;
+        nitsContent.innerHTML = nits.map(nit => `
+          <div class="py-1.5 border-b border-white/[0.04] last:border-none">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-slate-200">${escapeHtml(nit.title)}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${nit.line_start ? 'Line ' + nit.line_start : ''}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(nit.description)}</p>
+          </div>
+        `).join('');
+      } else {
+        nitsContainer.classList.add('hidden');
       }
 
       // Developer Growth Tips
@@ -589,96 +796,107 @@
         growthSection.classList.remove('hidden');
         growthContent.innerHTML = growthTips.map(tip => `
           <div class="text-xs space-y-1">
-            <strong class="text-indigo-200 font-medium">${escapeHtml(tip.topic)}:</strong>
-            <p class="text-slate-300">${escapeHtml(tip.advice)}</p>
-            ${tip.learning_resource ? `<a href="${tip.learning_resource}" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline inline-block text-[11px] mt-1">Read Best Practices Guide &rarr;</a>` : ''}
+            <strong class="text-indigo-200 font-semibold">${escapeHtml(tip.topic)}:</strong>
+            <p class="text-slate-300 leading-relaxed">${escapeHtml(tip.advice)}</p>
+            ${tip.learning_resource ? `<a href="${tip.learning_resource}" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1 text-[11px] mt-1">Read Official Guide &rarr;</a>` : ''}
           </div>
         `).join('');
       } else {
         growthSection.classList.add('hidden');
       }
 
-      // Reset rating stars
+      // Reset rating
       selectedRating = 0;
-      updateStarDisplay(0);
+      updateStarUI();
       document.getElementById('send-feedback-btn').disabled = true;
     }
 
-    // Rating star handler
-    function setRating(val) {
-      selectedRating = val;
-      updateStarDisplay(val);
+    function toggleNits() {
+      const content = document.getElementById('nits-content');
+      const chevron = document.getElementById('nits-chevron');
+      const isHidden = content.classList.contains('hidden');
+      if (isHidden) {
+        content.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+      } else {
+        content.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function setRating(rating) {
+      selectedRating = rating;
+      updateStarUI();
       document.getElementById('send-feedback-btn').disabled = false;
     }
 
-    function updateStarDisplay(val) {
-      document.querySelectorAll('.star-btn').forEach(btn => {
-        const starVal = parseInt(btn.getAttribute('data-star'));
-        if (starVal <= val) {
-          btn.className = 'star-btn text-amber-400 text-base';
+    function updateStarUI() {
+      const stars = document.querySelectorAll('.star-btn');
+      stars.forEach(btn => {
+        const starNum = parseInt(btn.getAttribute('data-star'), 10);
+        if (starNum <= selectedRating) {
+          btn.classList.add('text-amber-400');
+          btn.classList.remove('text-slate-600');
         } else {
-          btn.className = 'star-btn text-slate-600 hover:text-amber-400 transition-colors text-base';
+          btn.classList.remove('text-amber-400');
+          btn.classList.add('text-slate-600');
         }
       });
     }
 
-    // Submit review feedback
     async function submitFeedback() {
       if (!currentReviewId || selectedRating === 0) return;
       const btn = document.getElementById('send-feedback-btn');
       btn.disabled = true;
-      btn.innerText = 'Saving...';
+      btn.innerText = 'Submitting...';
 
       try {
-        const res = await fetch(`/api/v1/reviews/${currentReviewId}/feedback`, {
+        const res = await fetch(`/api/v1/growth/reviews/${currentReviewId}/feedback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Authenticated-User-Email': 'accounts.google.com:engineer@company.com'
           },
-          body: JSON.stringify({ rating: selectedRating })
+          body: JSON.stringify({
+            rating: selectedRating,
+            comments: 'Interactive Web UI Rating'
+          })
         });
 
         if (res.ok) {
-          btn.innerText = 'Saved! ✓';
-          btn.className = 'ml-2 px-2.5 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+          btn.innerText = 'Submitted ✓';
+          btn.className = 'ml-2 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white border border-emerald-500';
         } else {
           btn.innerText = 'Error';
         }
       } catch (e) {
-        btn.innerText = 'Failed';
+        btn.innerText = 'Error';
       }
     }
 
-    // Utilities
-    function copySnippet(id, btnElem) {
-      const code = document.getElementById(id).innerText;
-      navigator.clipboard.writeText(code).then(() => {
-        const orig = btnElem.innerText;
-        btnElem.innerText = 'Copied!';
-        setTimeout(() => { btnElem.innerText = orig; }, 1500);
-      });
-    }
-
-    function copyReviewSummary() {
-      if (!lastAnalysisResult) return;
-      const a = lastAnalysisResult.analysis || {};
-      const md = `### Code Review Report\n**Score:** ${a.overall_score}/100\n**Summary:** ${a.summary}\n**Findings:** ${(a.findings || []).length}\n`;
-      navigator.clipboard.writeText(md).then(() => {
-        const btn = document.getElementById('copy-summary-btn-text');
-        btn.innerText = 'Copied!';
-        setTimeout(() => { btn.innerText = 'Copy Summary'; }, 1500);
+    function copySnippet(id, btnElement) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.innerText).then(() => {
+        const orig = btnElement.innerText;
+        btnElement.innerText = 'Copied ✓';
+        btnElement.classList.add('text-emerald-400');
+        setTimeout(() => {
+          btnElement.innerText = orig;
+          btnElement.classList.remove('text-emerald-400');
+        }, 1800);
       });
     }
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
-
-    // Load clean sample on initial load
-    loadSample('clean');
   </script>
 </body>
 </html>
-

@@ -26,12 +26,27 @@ SUPPORTED_LANGUAGES = {
     "shell",
     "kotlin",
     "swift",
+    "auto",
 }
+
+
+class LanguageDetectRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+
+
+class LanguageDetectResponse(BaseModel):
+    detected_language: str
+    confidence: float
+    detected_by: str
+    is_ambiguous: bool
+    candidate_scores: Dict[str, int] = Field(default_factory=dict)
+    supported_languages: List[str] = Field(default_factory=list)
 
 
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
-    language: str = Field(default="python")
+    language: str = Field(default="auto")
     filename: Optional[str] = None
     repo_name: Optional[str] = None
     branch: Optional[str] = None
@@ -68,6 +83,8 @@ class ReviewSubmissionResponse(BaseModel):
     submitted_at: datetime
     filename: Optional[str] = None
     language: str
+    detected_language_confidence: Optional[float] = None
+    detected_by: Optional[str] = None
     rules_applied_count: int = 0
     pruning_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None

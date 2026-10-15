@@ -7,6 +7,9 @@ from app.api.v1.models import (
     ReviewSubmissionResponse,
     ReviewDetailResponse,
     RedactionSummary,
+    LanguageDetectRequest,
+    LanguageDetectResponse,
+    SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
 from app.auth.iap import get_current_user
@@ -20,6 +23,7 @@ from app.storage.service import StorageService, get_storage_service
 from app.storage.models import ReviewDocument
 from app.reviewer.diff_pruner import DiffPruner
 from app.reviewer.batch_engine import BatchReviewEngine
+from app.reviewer.language_detector import LanguageDetector
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -84,13 +88,22 @@ async def submit_code_for_review(
         "pruned_files": [p.model_dump() for p in prune_res.pruned_files],
     } if prune_res.pruned_files_count > 0 else None
 
-    # 1. Scrub credentials and PII
+    # 1. Automatic Language Detection from extension or code syntax
+    detector = LanguageDetector()
+    detect_res = detector.detect(code_to_review, filename=submission.filename)
+    effective_language = (
+        detect_res.detected_language
+        if submission.language in ("auto", "", None)
+        else submission.language
+    )
+
+    # 2. Scrub credentials and PII
     sanitization_result = sanitizer.sanitize(code_to_review)
 
-    # 2. Guard against prompt injection and isolate boundaries
+    # 3. Guard against prompt injection and isolate boundaries
     guard_result = guard.inspect_and_wrap(
         code=sanitization_result.sanitized_code,
-        language=submission.language,
+        language=effective_language,
         context=submission.context or "",
     )
 
@@ -114,11 +127,11 @@ async def submit_code_for_review(
         for r in sanitization_result.redactions
     ]
 
-    # 3. Retrieve matching team rules from BigQuery historical engine
-    active_rules = await learning_service.get_enrichment_rules(language=submission.language)
+    # 4. Retrieve matching team rules from BigQuery historical engine
+    active_rules = await learning_service.get_enrichment_rules(language=effective_language)
     prompt_rules = learning_service.format_rules_for_prompt(active_rules)
 
-    # 4. Analyze code with AI review engine enriched with team rules
+    # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
         batch_engine = BatchReviewEngine(engine=engine)
@@ -130,19 +143,19 @@ async def submit_code_for_review(
     else:
         analysis = await engine.analyze(
             code=guard_result.secured_prompt,
-            language=submission.language,
+            language=effective_language,
             filename=submission.filename,
             context=submission.context,
             rules=prompt_rules,
             min_severity=submission.min_severity,
         )
 
-    # 5. Record analytical telemetry in BigQuery
+    # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
         review_id=review_id,
         user_id=user.user_id,
         user_email=user.email,
-        language=submission.language,
+        language=effective_language,
         filename=submission.filename,
         original_line_count=sanitization_result.original_line_count,
         sanitized_secrets_count=sanitization_result.total_redactions,
@@ -159,7 +172,7 @@ async def submit_code_for_review(
         submitted_at=submitted_at,
         status=review_status,
         filename=submission.filename,
-        language=submission.language,
+        language=effective_language,
         original_line_count=sanitization_result.original_line_count,
         sanitized_code=sanitization_result.sanitized_code,
         secured_prompt=guard_result.secured_prompt,
@@ -180,7 +193,9 @@ async def submit_code_for_review(
         "submitted_by": user.email,
         "submitted_at": submitted_at,
         "filename": submission.filename,
-        "language": submission.language,
+        "language": effective_language,
+        "detected_language_confidence": detect_res.confidence,
+        "detected_by": detect_res.detected_by,
         "original_line_count": sanitization_result.original_line_count,
         "sanitized_code": sanitization_result.sanitized_code,
         "secured_prompt": guard_result.secured_prompt,
@@ -207,10 +222,32 @@ async def submit_code_for_review(
         submitted_by=user.email,
         submitted_at=submitted_at,
         filename=submission.filename,
-        language=submission.language,
+        language=effective_language,
+        detected_language_confidence=detect_res.confidence,
+        detected_by=detect_res.detected_by,
         rules_applied_count=len(prompt_rules),
         pruning_summary=pruning_summary,
         analysis=analysis,
+    )
+
+
+@router.post(
+    "/detect-language",
+    response_model=LanguageDetectResponse,
+    summary="Automatically detect programming language from code and filename",
+)
+async def detect_language_endpoint(
+    req: LanguageDetectRequest,
+) -> LanguageDetectResponse:
+    detector = LanguageDetector()
+    res = detector.detect(req.code, filename=req.filename)
+    return LanguageDetectResponse(
+        detected_language=res.detected_language,
+        confidence=res.confidence,
+        detected_by=res.detected_by,
+        is_ambiguous=res.is_ambiguous,
+        candidate_scores=res.candidate_scores,
+        supported_languages=sorted(list(SUPPORTED_LANGUAGES - {"auto"})),
     )
 
 
