@@ -13,6 +13,7 @@ from app.reviewer.models import (
 )
 from app.reviewer.prompts import SYSTEM_INSTRUCTION, build_review_prompt
 from app.reviewer.fix_validator import FixValidator
+from app.reviewer.noise_filter import NoiseFilter
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class BaseReviewEngine(ABC):
         filename: Optional[str] = None,
         context: Optional[str] = None,
         rules: Optional[List[str]] = None,
+        min_severity: Optional[str] = "low",
     ) -> ReviewAnalysisResult:
         pass
 
@@ -40,6 +42,7 @@ class MockReviewEngine(BaseReviewEngine):
         filename: Optional[str] = None,
         context: Optional[str] = None,
         rules: Optional[List[str]] = None,
+        min_severity: Optional[str] = "low",
     ) -> ReviewAnalysisResult:
         start_time = time.time()
         findings: List[ReviewFinding] = []
@@ -156,7 +159,7 @@ class MockReviewEngine(BaseReviewEngine):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        return ReviewAnalysisResult(
+        result = ReviewAnalysisResult(
             overall_score=overall_score,
             summary=summary,
             category_scores=scores,
@@ -165,6 +168,10 @@ class MockReviewEngine(BaseReviewEngine):
             model_used="mock-engine",
             evaluation_latency_ms=round(latency_ms, 2),
         )
+
+        # Apply intelligent noise reduction and nitpick consolidation
+        noise_filter = NoiseFilter()
+        return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
 
 
 class GeminiReviewEngine(BaseReviewEngine):
@@ -195,12 +202,13 @@ class GeminiReviewEngine(BaseReviewEngine):
         filename: Optional[str] = None,
         context: Optional[str] = None,
         rules: Optional[List[str]] = None,
+        min_severity: Optional[str] = "low",
     ) -> ReviewAnalysisResult:
         client = self._get_client()
         if client is None:
             # Fall back to mock analyzer when credentials are unavailable
             fallback = MockReviewEngine()
-            return await fallback.analyze(code, language, filename, context, rules)
+            return await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
 
         prompt = build_review_prompt(code, language, filename, context, rules)
         start_time = time.time()
@@ -233,7 +241,9 @@ class GeminiReviewEngine(BaseReviewEngine):
                 validator = FixValidator()
                 result.findings = validator.validate_and_sanitize_findings(result.findings, language)
 
-                return result
+                # Apply intelligent noise reduction and nitpick consolidation
+                noise_filter = NoiseFilter()
+                return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
 
             except Exception as e:
                 last_exception = e
@@ -249,7 +259,7 @@ class GeminiReviewEngine(BaseReviewEngine):
         logger.error(f"Gemini analysis failed after {max_retries} retries: {last_exception}")
         # Graceful fallback so API caller still gets structured feedback
         fallback = MockReviewEngine()
-        res = await fallback.analyze(code, language, filename, context, rules)
+        res = await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
         res.summary = f"[Fallback Review] Upstream model error: {str(last_exception)}. Heuristic review generated."
         return res
 

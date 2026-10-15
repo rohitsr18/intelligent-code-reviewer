@@ -9,6 +9,8 @@ class FindingCategory(str, Enum):
     SECURITY = "security"
     PERFORMANCE = "performance"
     GROWTH = "growth"
+    STYLE = "style"
+    MAINTAINABILITY = "maintainability"
 
 
 class FindingSeverity(str, Enum):
@@ -43,6 +45,8 @@ class ReviewAnalysisResult(BaseModel):
     summary: str
     category_scores: Dict[str, int] = Field(default_factory=dict)
     findings: List[ReviewFinding] = Field(default_factory=list)
+    style_nits: List[ReviewFinding] = Field(default_factory=list)
+    noise_reduction_applied: bool = False
     growth_tips: List[GrowthTip] = Field(default_factory=list)
     model_used: str = "gemini-1.5-pro"
     evaluation_latency_ms: float = 0.0

@@ -240,6 +240,31 @@ def format_markdown_pr_comment(review_data: Dict[str, Any]) -> str:
             "",
         ])
 
+    # Style & Minor Suggestions (Collapsible block to eliminate review fatigue)
+    style_nits = analysis.get("style_nits", [])
+    if style_nits:
+        md.extend([
+            "<details>",
+            f"<summary>🎨 <b>Style & Minor Suggestions ({len(style_nits)})</b> — Non-blocking</summary>",
+            "",
+            "> These minor stylistic observations were consolidated into this collapsible view to eliminate PR comment clutter.",
+            "",
+        ])
+        for nit in style_nits:
+            title = nit.get("title", "Style recommendation")
+            desc = nit.get("description", "")
+            fix = nit.get("suggested_fix")
+            line = nit.get("line_start")
+            loc_str = f" `Line {line}`" if line else ""
+            md.append(f"- **{title}**{loc_str}: {desc}")
+            if fix:
+                md.append(f"  - *Suggested adjustment:* `{fix.strip()}`")
+        md.extend([
+            "",
+            "</details>",
+            "",
+        ])
+
     # Growth Tips
     growth_tips = analysis.get("growth_tips", [])
     if growth_tips:

@@ -124,6 +124,7 @@ async def submit_code_for_review(
         filename=submission.filename,
         context=submission.context,
         rules=prompt_rules,
+        min_severity=submission.min_severity,
     )
 
     # 5. Record analytical telemetry in BigQuery

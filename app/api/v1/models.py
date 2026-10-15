@@ -36,6 +36,7 @@ class ReviewSubmissionRequest(BaseModel):
     repo_name: Optional[str] = None
     branch: Optional[str] = None
     context: Optional[str] = None
+    min_severity: Optional[str] = "low"
 
     @field_validator("language")
     @classmethod
