@@ -50,3 +50,4 @@ def test_missing_ui_file_returns_404(client: TestClient):
         response = client.get("/")
         assert response.status_code == 404
         assert response.json()["detail"] == "Web UI not found"
+
