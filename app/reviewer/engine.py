@@ -12,6 +12,7 @@ from app.reviewer.models import (
     GrowthTip,
 )
 from app.reviewer.prompts import SYSTEM_INSTRUCTION, build_review_prompt
+from app.reviewer.fix_validator import FixValidator
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,10 @@ class MockReviewEngine(BaseReviewEngine):
             overall_score = max(30, int(sum(scores.values()) / len(scores)))
             summary = f"Identified {len(findings)} potential areas for improvement, including security or correctness concerns."
 
+        # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
+        validator = FixValidator()
+        findings = validator.validate_and_sanitize_findings(findings, language)
+
         latency_ms = (time.time() - start_time) * 1000
 
         return ReviewAnalysisResult(
@@ -223,6 +228,11 @@ class GeminiReviewEngine(BaseReviewEngine):
                 result = ReviewAnalysisResult.model_validate_json(response.text)
                 result.evaluation_latency_ms = round(latency_ms, 2)
                 result.model_used = self.settings.gemini_model
+
+                # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
+                validator = FixValidator()
+                result.findings = validator.validate_and_sanitize_findings(result.findings, language)
+
                 return result
 
             except Exception as e:

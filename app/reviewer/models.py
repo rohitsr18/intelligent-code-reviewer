@@ -28,6 +28,8 @@ class ReviewFinding(BaseModel):
     line_end: Optional[int] = None
     suggested_fix: Optional[str] = None
     rule_id: Optional[str] = None
+    is_fix_valid: bool = True
+    fix_validation_note: Optional[str] = None
 
 
 class GrowthTip(BaseModel):
