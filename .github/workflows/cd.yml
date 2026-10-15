@@ -41,6 +41,7 @@ jobs:
 
           REG_LOC="${{ env.GAR_LOCATION }}"
           REPO_NAME=""
+          IMAGE_BASE=""
 
           # 1. Check if dedicated reviewer-repo already exists in target location
           if gcloud artifacts repositories describe reviewer-repo --location="$REG_LOC" >/dev/null 2>&1; then
@@ -76,17 +77,28 @@ jobs:
 
               # Fallback if no other repository exists
               if [ -z "$REPO_NAME" ]; then
-                REPO_NAME="reviewer-repo"
-                echo "Falling back to target repository name: $REPO_NAME"
+                if gcloud artifacts repositories describe gcr.io --location=us >/dev/null 2>&1; then
+                  IMAGE_BASE="gcr.io/${{ env.PROJECT_ID }}"
+                  echo "Falling back to existing gcr.io repository in Artifact Registry."
+                  gcloud auth configure-docker gcr.io --quiet
+                else
+                  REPO_NAME="reviewer-repo"
+                  echo "Falling back to target repository name: $REPO_NAME"
+                fi
               fi
             fi
           fi
 
-          echo "Selected Artifact Registry repository: $REPO_NAME in $REG_LOC"
-
-          # Construct container image tags
-          IMAGE_TAG="${REG_LOC}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPO_NAME}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
-          LATEST_TAG="${REG_LOC}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPO_NAME}/${{ env.SERVICE_NAME }}:latest"
+          if [ -n "$IMAGE_BASE" ]; then
+            echo "Selected container registry base: $IMAGE_BASE"
+            IMAGE_TAG="${IMAGE_BASE}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+            LATEST_TAG="${IMAGE_BASE}/${{ env.SERVICE_NAME }}:latest"
+          else
+            echo "Selected Artifact Registry repository: $REPO_NAME in $REG_LOC"
+            IMAGE_BASE="${REG_LOC}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPO_NAME}"
+            IMAGE_TAG="${IMAGE_BASE}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+            LATEST_TAG="${IMAGE_BASE}/${{ env.SERVICE_NAME }}:latest"
+          fi
 
           echo "Target Image Tag: $IMAGE_TAG"
           echo "Target Latest Tag: $LATEST_TAG"
