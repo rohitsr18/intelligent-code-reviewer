@@ -9,7 +9,6 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GAR_LOCATION: us-central1
-  REPOSITORY: reviewer-repo
   SERVICE_NAME: code-reviewer
   REGION: us-central1
 
@@ -31,31 +30,62 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_WIF_SA_EMAIL }}
 
-      - name: Configure Docker for Artifact Registry
+      - name: Build, Tag & Push Container Image
         run: |
-          gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
-          # Detect existing Docker repository in region or create fallback
-          EXISTING_REPO=$(gcloud artifacts repositories list --location=${{ env.GAR_LOCATION }} --format="value(name)" 2>/dev/null | head -n 1 | awk -F'/' '{print $NF}')
-          if [ -n "$EXISTING_REPO" ]; then
-            echo "Using existing Artifact Registry repository: $EXISTING_REPO"
-            echo "REPOSITORY=$EXISTING_REPO" >> $GITHUB_ENV
-          else
-            echo "Creating Artifact Registry repository: ${{ env.REPOSITORY }}"
-            gcloud artifacts repositories create ${{ env.REPOSITORY }} \
-              --repository-format=docker \
-              --location=${{ env.GAR_LOCATION }} \
-              --description="Docker repository for code reviewer" \
-              --quiet || true
-            echo "REPOSITORY=${{ env.REPOSITORY }}" >> $GITHUB_ENV
+          echo "=== 1. Configure Docker Authentication ==="
+          gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev" --quiet
+
+          echo "=== 2. Resolving Artifact Registry Repository ==="
+          # List repositories in the target location
+          echo "Listing Artifact Registry repositories in ${{ env.GAR_LOCATION }}..."
+          gcloud artifacts repositories list --location="${{ env.GAR_LOCATION }}" || true
+
+          # Find existing Docker repository in GAR_LOCATION
+          REPO_NAME=$(gcloud artifacts repositories list --location="${{ env.GAR_LOCATION }}" --filter="format=DOCKER" --format="value(name)" 2>/dev/null | head -n 1 | awk -F'/' '{print $NF}')
+          REG_LOC="${{ env.GAR_LOCATION }}"
+
+          # If no Docker repository in GAR_LOCATION, check all locations in the project
+          if [ -z "$REPO_NAME" ]; then
+            echo "No Docker repository found in ${{ env.GAR_LOCATION }}. Checking across all locations..."
+            FULL_REPO=$(gcloud artifacts repositories list --filter="format=DOCKER" --format="value(name)" 2>/dev/null | head -n 1)
+            if [ -n "$FULL_REPO" ]; then
+              REPO_NAME=$(echo "$FULL_REPO" | awk -F'/' '{print $NF}')
+              DETECTED_LOC=$(echo "$FULL_REPO" | awk -F'/' '{print $4}')
+              if [ -n "$DETECTED_LOC" ]; then
+                REG_LOC="$DETECTED_LOC"
+                echo "Found Docker repository in alternate location: $REPO_NAME in $REG_LOC"
+                gcloud auth configure-docker "${REG_LOC}-docker.pkg.dev" --quiet
+              fi
+            fi
           fi
 
-      - name: Build & Tag Container Image
-        run: |
-          IMAGE_TAG="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
-          LATEST_TAG="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:latest"
+          # If still no repository found, attempt to create reviewer-repo
+          if [ -z "$REPO_NAME" ]; then
+            REPO_NAME="reviewer-repo"
+            echo "No existing repository found. Attempting to create $REPO_NAME in $REG_LOC..."
+            gcloud artifacts repositories create "$REPO_NAME" \
+              --repository-format=docker \
+              --location="$REG_LOC" \
+              --description="Docker repository for code reviewer" \
+              --quiet || echo "Notice: repository create command completed (may already exist or need admin role)."
+          fi
+
+          echo "Selected Artifact Registry repository: $REPO_NAME in $REG_LOC"
+
+          # Construct container image tags
+          IMAGE_TAG="${REG_LOC}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPO_NAME}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          LATEST_TAG="${REG_LOC}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPO_NAME}/${{ env.SERVICE_NAME }}:latest"
+
+          echo "Target Image Tag: $IMAGE_TAG"
+          echo "Target Latest Tag: $LATEST_TAG"
+
+          echo "=== 3. Build Docker Image ==="
           docker build -t "$IMAGE_TAG" -t "$LATEST_TAG" .
+
+          echo "=== 4. Push Docker Image to Artifact Registry ==="
           docker push "$IMAGE_TAG"
           docker push "$LATEST_TAG"
+
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
@@ -65,4 +95,3 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE_TAG }}
           flags: "--allow-unauthenticated --traffic=100"
-

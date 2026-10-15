@@ -16,7 +16,7 @@ def test_root_endpoint_serves_html_ui(client: TestClient):
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Intelligent Code Reviewer" in response.text
-    assert "Analyze & Review Code" in response.text
+    assert "Run Intelligent Review" in response.text
     assert "Pre-LLM Data Leak Prevention" in response.text
 
 
