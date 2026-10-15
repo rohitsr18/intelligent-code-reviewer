@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "24/7 Intelligent Code Reviewer"
+    app_version: str = Field(default="1.0.0", alias="APP_VERSION")
     environment: str = Field(default="development", alias="ENVIRONMENT")
     port: int = Field(default=8080, alias="PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

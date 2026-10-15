@@ -16,6 +16,7 @@ async def readiness() -> Dict[str, Any]:
     return {
         "status": "ready",
         "app_name": settings.app_name,
+        "version": settings.app_version,
         "environment": settings.environment,
         "features": {
             "secret_scanning": settings.secret_scanning_enabled,

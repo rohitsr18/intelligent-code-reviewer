@@ -15,7 +15,9 @@ def test_root_endpoint_serves_html_ui(client: TestClient):
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Intelligent Code Reviewer" in response.text
+    assert "Code Sarathi" in response.text
+    assert "24/7 Intelligent Code Reviewer" in response.text
+    assert "v1.0.0" in response.text
     assert "Run Intelligent Review" in response.text
     assert "Pre-LLM Data Leak Prevention" in response.text
 
@@ -25,7 +27,7 @@ def test_ui_alias_endpoint_serves_html(client: TestClient):
     response = client.get("/ui")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Intelligent Code Reviewer" in response.text
+    assert "Code Sarathi" in response.text
 
 
 def test_security_headers_present_on_web_ui(client: TestClient):
