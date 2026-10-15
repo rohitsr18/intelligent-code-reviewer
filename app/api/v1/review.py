@@ -18,6 +18,7 @@ from app.reviewer.engine import BaseReviewEngine, get_review_engine
 from app.analytics.service import HistoricalLearningService, get_historical_learning_service
 from app.storage.service import StorageService, get_storage_service
 from app.storage.models import ReviewDocument
+from app.reviewer.diff_pruner import DiffPruner
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -70,8 +71,20 @@ async def submit_code_for_review(
             detail=f"Code length ({code_lines} lines) exceeds limit of {settings.max_code_lines} lines",
         )
 
+    # 0. Intelligent Diff Pruning & Token Optimization
+    pruner = DiffPruner()
+    prune_res = pruner.prune_diff(submission.code)
+    code_to_review = prune_res.clean_diff if prune_res.clean_diff else submission.code
+    pruning_summary = {
+        "pruned_files_count": prune_res.pruned_files_count,
+        "reviewed_files_count": prune_res.reviewed_files_count,
+        "tokens_saved_estimate": prune_res.estimated_tokens_saved,
+        "reduction_percentage": prune_res.reduction_percentage,
+        "pruned_files": [p.model_dump() for p in prune_res.pruned_files],
+    } if prune_res.pruned_files_count > 0 else None
+
     # 1. Scrub credentials and PII
-    sanitization_result = sanitizer.sanitize(submission.code)
+    sanitization_result = sanitizer.sanitize(code_to_review)
 
     # 2. Guard against prompt injection and isolate boundaries
     guard_result = guard.inspect_and_wrap(
@@ -165,6 +178,7 @@ async def submit_code_for_review(
         "is_safe_prompt": guard_result.is_safe,
         "flags": guard_result.flags,
         "rules_applied_count": len(prompt_rules),
+        "pruning_summary": pruning_summary,
         "analysis": analysis,
     }
 
@@ -184,6 +198,7 @@ async def submit_code_for_review(
         filename=submission.filename,
         language=submission.language,
         rules_applied_count=len(prompt_rules),
+        pruning_summary=pruning_summary,
         analysis=analysis,
     )
 

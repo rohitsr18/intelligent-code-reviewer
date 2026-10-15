@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple, Any
 import httpx
 from app.security.sanitizer import CodeSanitizer
 from app.reviewer.models import FindingSeverity
+from app.reviewer.diff_pruner import DiffPruner
 
 
 def get_git_diff(base_ref: Optional[str] = None, staged_only: bool = False) -> str:
@@ -189,6 +190,18 @@ def format_markdown_pr_comment(review_data: Dict[str, Any]) -> str:
             "",
         ])
 
+    # Token and Cost Optimization alert
+    pruning = review_data.get("pruning_summary")
+    if pruning and pruning.get("pruned_files_count", 0) > 0:
+        p_count = pruning.get("pruned_files_count", 0)
+        p_pct = pruning.get("reduction_percentage", 0.0)
+        p_tokens = pruning.get("tokens_saved_estimate", 0)
+        md.extend([
+            "> [!NOTE]",
+            f"> **⚡ Token & Cost Optimizer:** Automatically pruned **{p_count} generated/lockfiles** ({p_pct}% diff reduction, saved ~{p_tokens:,} tokens).",
+            "",
+        ])
+
     # Executive Summary
     summary = analysis.get("summary", "Analysis completed.")
     md.extend([
@@ -287,17 +300,33 @@ def main() -> int:
         print("ℹ️ No code changes detected in diff. Skipping review.")
         return 0
 
-    language = detect_language_from_diff(diff_text)
-    repo_name = os.environ.get("GITHUB_REPOSITORY", "intelligent-code-reviewer")
+    # Prune generated lockfiles and bundles before analysis
+    pruner = DiffPruner()
+    pruned_res = pruner.prune_diff(diff_text)
+    diff_to_analyze = pruned_res.clean_diff if pruned_res.clean_diff else diff_text
+    local_pruning_summary = {
+        "pruned_files_count": pruned_res.pruned_files_count,
+        "reviewed_files_count": pruned_res.reviewed_files_count,
+        "tokens_saved_estimate": pruned_res.estimated_tokens_saved,
+        "reduction_percentage": pruned_res.reduction_percentage,
+    } if pruned_res.pruned_files_count > 0 else None
 
-    print(f"🔍 Analyzing diff ({len(diff_text.splitlines())} lines, detected {language})...")
+    if pruned_res.pruned_files_count > 0:
+        print(f"⚡ Token Optimizer: Pruned {pruned_res.pruned_files_count} generated files (saved ~{pruned_res.estimated_tokens_saved:,} tokens, {pruned_res.reduction_percentage}% reduction).")
+
+    language = detect_language_from_diff(diff_to_analyze)
+    repo_name = os.environ.get("GITHUB_REPOSITORY", "intelligent-code-reviewer")
+    print(f"🔍 Analyzing diff ({len(diff_to_analyze.splitlines())} lines, detected {language})...")
 
     # 2. Run Review (Remote service first, local fallback if unreachable)
     review_data = None
     if args.service_url:
-        review_data = analyze_diff_remotely(args.service_url, diff_text, language, repo_name)
+        review_data = analyze_diff_remotely(args.service_url, diff_to_analyze, language, repo_name)
     if not review_data:
-        review_data = analyze_diff_locally(diff_text, language)
+        review_data = analyze_diff_locally(diff_to_analyze, language)
+
+    if local_pruning_summary and "pruning_summary" not in review_data:
+        review_data["pruning_summary"] = local_pruning_summary
 
     # 3. Format Comment
     markdown_comment = format_markdown_pr_comment(review_data)
