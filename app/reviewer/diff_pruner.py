@@ -228,3 +228,4 @@ class DiffPruner:
             estimated_tokens_saved=estimated_tokens_saved,
             reduction_percentage=reduction_pct,
         )
+
