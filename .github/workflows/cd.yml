@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GAR_LOCATION: us-central1
   REPOSITORY: reviewer-repo
-  SERVICE_NAME: intelligent-code-reviewer
+  SERVICE_NAME: code-reviewer
   REGION: us-central1
 
 jobs:
@@ -33,6 +34,12 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
+          # Ensure Artifact Registry repository exists
+          gcloud artifacts repositories create ${{ env.REPOSITORY }} \
+            --repository-format=docker \
+            --location=${{ env.GAR_LOCATION }} \
+            --description="Docker repository for code reviewer" \
+            --quiet || true
 
       - name: Build & Tag Container Image
         run: |
