@@ -68,6 +68,7 @@ class ReviewSubmissionResponse(BaseModel):
     filename: Optional[str] = None
     language: str
     rules_applied_count: int = 0
+    pruning_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -87,6 +88,7 @@ class ReviewDetailResponse(BaseModel):
     rules_applied_count: int = 0
     feedback: Optional[Dict[str, Any]] = None
     session_id: Optional[str] = None
+    pruning_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
