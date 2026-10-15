@@ -19,6 +19,7 @@ from app.analytics.service import HistoricalLearningService, get_historical_lear
 from app.storage.service import StorageService, get_storage_service
 from app.storage.models import ReviewDocument
 from app.reviewer.diff_pruner import DiffPruner
+from app.reviewer.batch_engine import BatchReviewEngine
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -118,14 +119,23 @@ async def submit_code_for_review(
     prompt_rules = learning_service.format_rules_for_prompt(active_rules)
 
     # 4. Analyze code with AI review engine enriched with team rules
-    analysis = await engine.analyze(
-        code=guard_result.secured_prompt,
-        language=submission.language,
-        filename=submission.filename,
-        context=submission.context,
-        rules=prompt_rules,
-        min_severity=submission.min_severity,
-    )
+    # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
+    if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
+        batch_engine = BatchReviewEngine(engine=engine)
+        analysis = await batch_engine.analyze_diff_parallel(
+            raw_diff=guard_result.secured_prompt,
+            rules=prompt_rules,
+            min_severity=submission.min_severity,
+        )
+    else:
+        analysis = await engine.analyze(
+            code=guard_result.secured_prompt,
+            language=submission.language,
+            filename=submission.filename,
+            context=submission.context,
+            rules=prompt_rules,
+            min_severity=submission.min_severity,
+        )
 
     # 5. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(

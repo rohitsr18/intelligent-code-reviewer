@@ -202,6 +202,17 @@ def format_markdown_pr_comment(review_data: Dict[str, Any]) -> str:
             "",
         ])
 
+    # Parallel Latency & Fast-Path Triage Alert
+    files_reviewed = analysis.get("total_files_reviewed", 1)
+    speedup = analysis.get("parallel_speedup_factor", 1.0)
+    fast_path_files = analysis.get("fast_path_files_count", 0)
+    if files_reviewed and files_reviewed > 1:
+        md.extend([
+            "> [!TIP]",
+            f"> **⚡ Parallel Review & Fast-Path Triage:** Evaluated **{files_reviewed} files concurrently** ({fast_path_files} fast-pathed) achieving **~{speedup}x throughput speedup** over sequential review.",
+            "",
+        ])
+
     # Executive Summary
     summary = analysis.get("summary", "Analysis completed.")
     md.extend([

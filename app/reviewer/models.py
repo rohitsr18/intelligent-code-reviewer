@@ -50,6 +50,9 @@ class ReviewAnalysisResult(BaseModel):
     growth_tips: List[GrowthTip] = Field(default_factory=list)
     model_used: str = "gemini-1.5-pro"
     evaluation_latency_ms: float = 0.0
+    total_files_reviewed: Optional[int] = 1
+    fast_path_files_count: Optional[int] = 0
+    parallel_speedup_factor: Optional[float] = 1.0
 
     @property
     def total_findings(self) -> int:

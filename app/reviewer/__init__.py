@@ -13,6 +13,8 @@ from app.reviewer.engine import (
     get_review_engine,
 )
 
+from app.reviewer.batch_engine import BatchReviewEngine, FileDiffUnit
+
 __all__ = [
     "FindingCategory",
     "FindingSeverity",
@@ -25,4 +27,6 @@ __all__ = [
     "GeminiReviewEngine",
     "MockReviewEngine",
     "get_review_engine",
+    "BatchReviewEngine",
+    "FileDiffUnit",
 ]
