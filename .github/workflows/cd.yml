@@ -36,38 +36,50 @@ jobs:
           gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev" --quiet
 
           echo "=== 2. Resolving Artifact Registry Repository ==="
-          # List repositories in the target location
-          echo "Listing Artifact Registry repositories in ${{ env.GAR_LOCATION }}..."
-          gcloud artifacts repositories list --location="${{ env.GAR_LOCATION }}" || true
+          echo "Listing all Artifact Registry repositories in project:"
+          gcloud artifacts repositories list || true
 
-          # Find existing Docker repository in GAR_LOCATION
-          REPO_NAME=$(gcloud artifacts repositories list --location="${{ env.GAR_LOCATION }}" --filter="format=DOCKER" --format="value(name)" 2>/dev/null | head -n 1 | awk -F'/' '{print $NF}')
           REG_LOC="${{ env.GAR_LOCATION }}"
+          REPO_NAME=""
 
-          # If no Docker repository in GAR_LOCATION, check all locations in the project
-          if [ -z "$REPO_NAME" ]; then
-            echo "No Docker repository found in ${{ env.GAR_LOCATION }}. Checking across all locations..."
-            FULL_REPO=$(gcloud artifacts repositories list --filter="format=DOCKER" --format="value(name)" 2>/dev/null | head -n 1)
-            if [ -n "$FULL_REPO" ]; then
-              REPO_NAME=$(echo "$FULL_REPO" | awk -F'/' '{print $NF}')
-              DETECTED_LOC=$(echo "$FULL_REPO" | awk -F'/' '{print $4}')
-              if [ -n "$DETECTED_LOC" ]; then
-                REG_LOC="$DETECTED_LOC"
-                echo "Found Docker repository in alternate location: $REPO_NAME in $REG_LOC"
-                gcloud auth configure-docker "${REG_LOC}-docker.pkg.dev" --quiet
+          # 1. Check if dedicated reviewer-repo already exists in target location
+          if gcloud artifacts repositories describe reviewer-repo --location="$REG_LOC" >/dev/null 2>&1; then
+            REPO_NAME="reviewer-repo"
+            echo "Verified existing repository: $REPO_NAME"
+          else
+            echo "Repository 'reviewer-repo' not found in $REG_LOC. Attempting creation..."
+            if gcloud artifacts repositories create reviewer-repo \
+                --repository-format=docker \
+                --location="$REG_LOC" \
+                --description="Docker repository for code reviewer" \
+                --quiet; then
+              REPO_NAME="reviewer-repo"
+              echo "Successfully created repository: $REPO_NAME"
+            else
+              echo "Could not create 'reviewer-repo'. Searching for existing non-gcr.io Docker repositories..."
+              # Query repositories in GAR_LOCATION, ignoring legacy gcr.io
+              REPO_NAME=$(gcloud artifacts repositories list --location="$REG_LOC" --filter="format=DOCKER AND NOT name:gcr.io" --format="value(name)" 2>/dev/null | head -n 1 | awk -F'/' '{print $NF}')
+
+              # If not found in GAR_LOCATION, search across all locations in project
+              if [ -z "$REPO_NAME" ]; then
+                FULL_REPO=$(gcloud artifacts repositories list --filter="format=DOCKER AND NOT name:gcr.io" --format="value(name)" 2>/dev/null | head -n 1)
+                if [ -n "$FULL_REPO" ]; then
+                  REPO_NAME=$(echo "$FULL_REPO" | awk -F'/' '{print $NF}')
+                  DETECTED_LOC=$(echo "$FULL_REPO" | awk -F'/' '{print $4}')
+                  if [ -n "$DETECTED_LOC" ]; then
+                    REG_LOC="$DETECTED_LOC"
+                    echo "Found alternate Docker repository: $REPO_NAME in $REG_LOC"
+                    gcloud auth configure-docker "${REG_LOC}-docker.pkg.dev" --quiet
+                  fi
+                fi
+              fi
+
+              # Fallback if no other repository exists
+              if [ -z "$REPO_NAME" ]; then
+                REPO_NAME="reviewer-repo"
+                echo "Falling back to target repository name: $REPO_NAME"
               fi
             fi
-          fi
-
-          # If still no repository found, attempt to create reviewer-repo
-          if [ -z "$REPO_NAME" ]; then
-            REPO_NAME="reviewer-repo"
-            echo "No existing repository found. Attempting to create $REPO_NAME in $REG_LOC..."
-            gcloud artifacts repositories create "$REPO_NAME" \
-              --repository-format=docker \
-              --location="$REG_LOC" \
-              --description="Docker repository for code reviewer" \
-              --quiet || echo "Notice: repository create command completed (may already exist or need admin role)."
           fi
 
           echo "Selected Artifact Registry repository: $REPO_NAME in $REG_LOC"
