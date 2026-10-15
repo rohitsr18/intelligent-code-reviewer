@@ -864,7 +864,7 @@
       btn.innerText = 'Submitting...';
 
       try {
-        const res = await fetch(`/api/v1/growth/reviews/${currentReviewId}/feedback`, {
+        const res = await fetch(`/api/v1/reviews/${currentReviewId}/feedback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -872,7 +872,8 @@
           },
           body: JSON.stringify({
             rating: selectedRating,
-            comments: 'Interactive Web UI Rating'
+            feedback: 'Interactive Web UI Rating',
+            helpful: selectedRating >= 3
           })
         });
 
