@@ -1,8 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from starlette.staticfiles import StaticFiles
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.api.v1.health import router as health_router
@@ -61,6 +63,25 @@ app.include_router(sessions_router, prefix="/api/v1")
 app.include_router(rules_router, prefix="/api/v1")
 app.include_router(reviews_query_router, prefix="/api/v1")
 app.include_router(growth_router, prefix="/api/v1")
+
+# Static assets and Web UI
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+INDEX_HTML = os.path.join(STATIC_DIR, "index.html")
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/ui", include_in_schema=False)
+async def serve_ui():
+    """Serves the interactive web-based code reviewer dashboard."""
+    if os.path.exists(INDEX_HTML):
+        return FileResponse(INDEX_HTML, media_type="text/html")
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": "Web UI not found"},
+    )
 
 
 @app.exception_handler(HTTPException)
