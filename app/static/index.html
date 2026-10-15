@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>24/7 Intelligent Code Reviewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['"Fira Code"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    textarea {
+      tab-size: 4;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header Navigation -->
+  <header class="bg-slate-900 border-b border-slate-800 shrink-0 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-semibold tracking-tight text-white">Intelligent Code Reviewer</h1>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v1.0.0</span>
+          </div>
+          <p class="text-xs text-slate-400">Enterprise AI Security & Continuous Quality Guardrails</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Live System Status -->
+        <div id="system-status-pill" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="system-status-text">Engine Online</span>
+        </div>
+
+        <a href="https://github.com/rohitsr18/intelligent-code-reviewer" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-white transition-colors" title="View Source on GitHub">
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+
+    <!-- Left Column: Code Input & Options (5 cols on lg) -->
+    <section class="lg:col-span-5 flex flex-col space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col flex-1">
+        
+        <!-- Quick Sample Presets -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <span class="text-xs font-medium text-slate-400">Quick Presets:</span>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="loadSample('secrets')" class="px-2 py-1 text-xs rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-all font-medium">
+              🔒 Secret Leak
+            </button>
+            <button type="button" onclick="loadSample('perf')" class="px-2 py-1 text-xs rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all font-medium">
+              ⚡ Anti-Pattern
+            </button>
+            <button type="button" onclick="loadSample('clean')" class="px-2 py-1 text-xs rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all font-medium">
+              ✅ Clean Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Meta Controls (Language, Repo, Filename) -->
+        <div class="grid grid-cols-2 gap-3 py-3 border-b border-slate-800">
+          <div>
+            <label for="code-language" class="block text-xs font-medium text-slate-400 mb-1">Language</label>
+            <select id="code-language" class="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="go">Go</option>
+              <option value="java">Java</option>
+              <option value="rust">Rust</option>
+              <option value="cpp">C++</option>
+              <option value="sql">SQL</option>
+              <option value="dockerfile">Dockerfile</option>
+              <option value="yaml">YAML</option>
+              <option value="shell">Shell / Bash</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="code-filename" class="block text-xs font-medium text-slate-400 mb-1">Filename</label>
+            <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-slate-950 border border-slate-750 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono" placeholder="e.g. handler.py">
+          </div>
+        </div>
+
+        <!-- Code Editor Area -->
+        <div class="flex-1 flex flex-col pt-3 min-h-[300px]">
+          <div class="flex items-center justify-between pb-1.5">
+            <label for="code-input" class="text-xs font-medium text-slate-300">Code to Review</label>
+            <div class="flex items-center space-x-3 text-xs text-slate-400">
+              <span id="line-counter">0 lines</span>
+              <button type="button" onclick="clearEditor()" class="text-slate-400 hover:text-slate-200 transition-colors">Clear</button>
+            </div>
+          </div>
+
+          <div class="relative flex-1 rounded-lg border border-slate-750 bg-slate-950 flex flex-col focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500 overflow-hidden">
+            <textarea id="code-input" spellcheck="false" placeholder="// Paste or write code here to review..." class="w-full flex-1 p-3 bg-transparent text-slate-100 font-mono text-xs leading-relaxed resize-none focus:outline-none custom-scrollbar"></textarea>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="pt-4">
+          <button id="submit-btn" type="button" onclick="submitReview()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-sm flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg id="btn-icon" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span id="btn-spinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            <span id="btn-text">Analyze & Review Code</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Review Results Dashboard (7 cols on lg) -->
+    <section class="lg:col-span-7 flex flex-col">
+      <div id="results-container" class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex-1 flex flex-col shadow-sm overflow-y-auto custom-scrollbar">
+
+        <!-- Empty State -->
+        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <div class="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-4 text-slate-400">
+            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </div>
+          <h3 class="text-base font-semibold text-slate-200 mb-1">No Code Reviewed Yet</h3>
+          <p class="text-xs text-slate-400 max-w-sm mb-6">
+            Paste code in the editor or click one of the quick presets on the left, then click <strong>Analyze & Review Code</strong> to see automated security, architecture, and quality analysis.
+          </p>
+
+          <div class="grid grid-cols-2 gap-3 max-w-md w-full text-left">
+            <div class="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+              <span class="text-xs font-semibold text-slate-300 block mb-0.5">🛡️ Pre-LLM DLP</span>
+              <span class="text-[11px] text-slate-400">Scans and redacts credentials before LLM ingestion.</span>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+              <span class="text-xs font-semibold text-slate-300 block mb-0.5">📊 Category Scoring</span>
+              <span class="text-[11px] text-slate-400">Scores security, bugs, performance, and architecture.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Review Output (Hidden until review finishes) -->
+        <div id="review-output" class="hidden space-y-6">
+
+          <!-- Top Score & Health Banner -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-slate-800 gap-4">
+            <div class="flex items-center space-x-4">
+              <!-- Score Circle Badge -->
+              <div id="overall-score-badge" class="w-16 h-16 rounded-2xl flex flex-col items-center justify-center border text-center shadow-lg">
+                <span id="score-value" class="text-2xl font-bold leading-none font-mono">--</span>
+                <span class="text-[10px] text-slate-400 font-medium tracking-wide uppercase mt-0.5">Score</span>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h2 id="review-status-title" class="text-lg font-bold text-white">Review Analysis</h2>
+                  <span id="severity-badge-summary" class="px-2 py-0.5 rounded text-xs font-medium">Passed</span>
+                </div>
+                <div class="flex items-center space-x-3 text-xs text-slate-400 mt-1">
+                  <span id="meta-engine-used" class="flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                    </svg>
+                    <span id="meta-engine-name">gemini-1.5-flash</span>
+                  </span>
+                  <span>•</span>
+                  <span id="meta-latency">0 ms</span>
+                  <span>•</span>
+                  <span id="meta-lines">0 lines</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Actions (Copy Review, Feedback) -->
+            <div class="flex items-center space-x-2 self-end sm:self-center">
+              <button onclick="copyReviewSummary()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-xs text-slate-300 border border-slate-700 flex items-center space-x-1.5 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                <span id="copy-summary-btn-text">Copy Summary</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- DLP Redactions Alert (If any) -->
+          <div id="dlp-alert-box" class="hidden rounded-xl border p-3.5 text-xs">
+            <!-- Injected dynamically -->
+          </div>
+
+          <!-- Executive Summary -->
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Executive Summary</h4>
+            <p id="summary-text" class="text-xs text-slate-200 leading-relaxed font-sans"></p>
+          </div>
+
+          <!-- Quality Category Score Breakdown -->
+          <div>
+            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5">Category Breakdown</h4>
+            <div id="category-bars" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Specific Findings List -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Findings & Actionable Fixes (<span id="findings-count">0</span>)
+              </h4>
+            </div>
+
+            <div id="findings-list" class="space-y-3">
+              <!-- Findings injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Developer Growth Mentorship -->
+          <div id="growth-section" class="hidden bg-gradient-to-br from-indigo-950/30 to-slate-900 border border-indigo-900/40 rounded-xl p-4">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="text-sm">🌱</span>
+              <h4 class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Developer Growth Tip</h4>
+            </div>
+            <div id="growth-tips-content">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Interactive Review Feedback Form -->
+          <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="text-center sm:text-left">
+              <span class="text-xs font-medium text-slate-300 block">Was this review helpful?</span>
+              <span class="text-[11px] text-slate-400">Your rating trains team historical learning.</span>
+            </div>
+
+            <div class="flex items-center space-x-1.5">
+              <div id="star-rating" class="flex items-center space-x-1">
+                <button type="button" onclick="setRating(1)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="1">★</button>
+                <button type="button" onclick="setRating(2)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="2">★</button>
+                <button type="button" onclick="setRating(3)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="3">★</button>
+                <button type="button" onclick="setRating(4)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="4">★</button>
+                <button type="button" onclick="setRating(5)" class="star-btn text-slate-600 hover:text-amber-400 transition-colors text-base" data-star="5">★</button>
+              </div>
+              <button id="send-feedback-btn" onclick="submitFeedback()" disabled class="ml-2 px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-400 border border-slate-750 disabled:opacity-50">
+                Submit
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State management
+    let currentReviewId = null;
+    let selectedRating = 0;
+    let lastAnalysisResult = null;
+
+    // Presets
+    const SAMPLES = {
+      secrets: {
+        lang: 'python',
+        filename: 'auth_controller.py',
+        code: `import os\n\ndef authenticate_github_service():\n    # DANGEROUS: Leaked hardcoded token and database credential\n    api_token = "ghp_ABC1234567890abcdefghijklmnopqrstuv"\n    db_password = "SuperSecretProdPassword99!"\n    \n    # Plaintext logging of user password\n    print(f"Connecting to database with {db_password}")\n    return api_token\n`
+      },
+      perf: {
+        lang: 'python',
+        filename: 'data_processing.py',
+        code: `def process_records(items):\n    # Anti-Pattern: unidiomatic range(len()) and eval\n    results = []\n    for i in range(len(items)):\n        raw_expr = items[i].get("expression")\n        # Unsafe dynamic code execution\n        calculated = eval(raw_expr)\n        results.append(calculated)\n    return results\n`
+      },
+      clean: {
+        lang: 'python',
+        filename: 'calculator.py',
+        code: `from typing import Union\n\ndef calculate_discount(price: float, discount_percent: float) -> float:\n    """Calculates discounted price with input validation."""\n    if not 0.0 <= discount_percent <= 100.0:\n        raise ValueError("Discount must be between 0 and 100 percent.")\n    if price < 0.0:\n        raise ValueError("Price cannot be negative.")\n    return round(price * (1.0 - (discount_percent / 100.0)), 2)\n`
+      }
+    };
+
+    function loadSample(key) {
+      const sample = SAMPLES[key];
+      if (!sample) return;
+      document.getElementById('code-language').value = sample.lang;
+      document.getElementById('code-filename').value = sample.filename;
+      const editor = document.getElementById('code-input');
+      editor.value = sample.code;
+      updateLineCounter();
+    }
+
+    function clearEditor() {
+      document.getElementById('code-input').value = '';
+      updateLineCounter();
+    }
+
+    function updateLineCounter() {
+      const text = document.getElementById('code-input').value;
+      const lines = text ? text.split('\n').length : 0;
+      document.getElementById('line-counter').innerText = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
+    }
+
+    // Support Tab key indentation in textarea
+    document.getElementById('code-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+        updateLineCounter();
+      }
+    });
+    document.getElementById('code-input').addEventListener('input', updateLineCounter);
+
+    // Initial check of system health
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health/ready');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('system-status-text').innerText = data.environment === 'production' ? 'GCP Production' : 'Development';
+        }
+      } catch (e) {
+        document.getElementById('system-status-pill').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-400">Offline / Mock</span>';
+      }
+    }
+    checkHealth();
+
+    // Submit code review
+    async function submitReview() {
+      const code = document.getElementById('code-input').value.trim();
+      if (!code) {
+        alert('Please enter or paste some code to review.');
+        return;
+      }
+
+      const language = document.getElementById('code-language').value;
+      const filename = document.getElementById('code-filename').value.trim() || 'code_snippet';
+
+      const btn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+      const btnIcon = document.getElementById('btn-icon');
+      const btnSpinner = document.getElementById('btn-spinner');
+
+      // Set loading state
+      btn.disabled = true;
+      btnIcon.classList.add('hidden');
+      btnSpinner.classList.remove('hidden');
+      btnText.innerText = 'Analyzing with AI Guardrails...';
+
+      try {
+        const payload = {
+          code: code,
+          language: language,
+          filename: filename,
+          repo_name: 'workbench'
+        };
+
+        const res = await fetch('/api/v1/review/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Authenticated-User-Email': 'accounts.google.com:engineer@company.com'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server returned error ${res.status}`);
+        }
+
+        const data = await res.json();
+        currentReviewId = data.review_id;
+        lastAnalysisResult = data;
+        renderReview(data);
+
+      } catch (err) {
+        alert(`Review failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btnIcon.classList.remove('hidden');
+        btnSpinner.classList.add('hidden');
+        btnText.innerText = 'Analyze & Review Code';
+      }
+    }
+
+    function renderReview(data) {
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('review-output').classList.remove('hidden');
+
+      const analysis = data.analysis || {};
+      const score = analysis.overall_score || 0;
+      
+      // Overall Score Badge
+      const scoreBadge = document.getElementById('overall-score-badge');
+      const scoreValue = document.getElementById('score-value');
+      scoreValue.innerText = score;
+
+      scoreBadge.className = 'w-16 h-16 rounded-2xl flex flex-col items-center justify-center border text-center shadow-lg ';
+      if (score >= 85) {
+        scoreBadge.className += 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10';
+      } else if (score >= 70) {
+        scoreBadge.className += 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-amber-500/10';
+      } else {
+        scoreBadge.className += 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-rose-500/10';
+      }
+
+      // Severity Summary Badge
+      const summaryBadge = document.getElementById('severity-badge-summary');
+      if (score >= 85) {
+        summaryBadge.innerText = 'High Quality';
+        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+      } else if (score >= 70) {
+        summaryBadge.innerText = 'Needs Attention';
+        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20';
+      } else {
+        summaryBadge.innerText = 'Action Required';
+        summaryBadge.className = 'px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20';
+      }
+
+      // Meta info
+      document.getElementById('meta-engine-name').innerText = analysis.model_used || 'gemini-1.5-flash';
+      document.getElementById('meta-latency').innerText = `${analysis.evaluation_latency_ms || 0} ms`;
+      document.getElementById('meta-lines').innerText = `${data.original_line_count || 0} lines`;
+
+      // Executive Summary
+      document.getElementById('summary-text').innerText = analysis.summary || 'Review completed successfully.';
+
+      // DLP Security Redactions
+      const dlpAlert = document.getElementById('dlp-alert-box');
+      if (data.redactions_count && data.redactions_count > 0) {
+        dlpAlert.classList.remove('hidden');
+        dlpAlert.className = 'rounded-xl border p-3.5 text-xs bg-rose-500/10 border-rose-500/30 text-rose-300 flex items-start space-x-2.5';
+        const secretsList = (data.redactions || []).map(r => r.secret_type).join(', ');
+        dlpAlert.innerHTML = `
+          <svg class="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div>
+            <strong class="font-semibold block text-rose-200">Pre-LLM Data Leak Prevention Triggered:</strong>
+            Scrubbed <span class="font-bold underline">${data.redactions_count} sensitive secrets</span> (${secretsList}) before sending to Gemini. Your credentials were never leaked upstream.
+          </div>
+        `;
+      } else {
+        dlpAlert.className = 'rounded-xl border p-3.5 text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-300 flex items-center space-x-2.5';
+        dlpAlert.innerHTML = `
+          <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          <span>No sensitive secrets or API tokens detected. Code passed DLP inspection.</span>
+        `;
+      }
+
+      // Category breakdown bars
+      const catContainer = document.getElementById('category-bars');
+      catContainer.innerHTML = '';
+      const scores = analysis.category_scores || {
+        security: 90,
+        architecture: 85,
+        performance: 90,
+        bugs: 95,
+        maintainability: 90
+      };
+
+      Object.entries(scores).forEach(([cat, catScore]) => {
+        let barColor = 'bg-emerald-500';
+        if (catScore < 70) barColor = 'bg-rose-500';
+        else if (catScore < 85) barColor = 'bg-amber-500';
+
+        const div = document.createElement('div');
+        div.className = 'p-2.5 rounded-lg bg-slate-950 border border-slate-800';
+        div.innerHTML = `
+          <div class="flex justify-between items-center text-xs mb-1">
+            <span class="capitalize text-slate-300 font-medium">${cat}</span>
+            <span class="font-mono font-semibold text-slate-200">${catScore}/100</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${catScore}%"></div>
+          </div>
+        `;
+        catContainer.appendChild(div);
+      });
+
+      // Specific Findings
+      const findings = analysis.findings || [];
+      document.getElementById('findings-count').innerText = findings.length;
+      const findingsList = document.getElementById('findings-list');
+      findingsList.innerHTML = '';
+
+      if (findings.length === 0) {
+        findingsList.innerHTML = `
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 text-center">
+            🎉 No critical defects or anti-patterns detected in this submission.
+          </div>
+        `;
+      } else {
+        findings.forEach((f, idx) => {
+          let sevClass = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+          if (f.severity === 'critical') sevClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+          else if (f.severity === 'high') sevClass = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+          else if (f.severity === 'medium') sevClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+          const card = document.createElement('div');
+          card.className = 'p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2';
+          
+          let fixSnippetHtml = '';
+          if (f.suggested_fix) {
+            fixSnippetHtml = `
+              <div class="mt-2.5 pt-2.5 border-t border-slate-850">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Suggested Fix:</span>
+                  <button onclick="copySnippet('fix-${idx}', this)" class="text-indigo-400 hover:text-indigo-300">Copy</button>
+                </div>
+                <pre id="fix-${idx}" class="p-2.5 rounded bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto custom-scrollbar">${escapeHtml(f.suggested_fix)}</pre>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${sevClass}">${f.severity}</span>
+                <span class="text-xs font-semibold text-slate-200">${escapeHtml(f.title)}</span>
+              </div>
+              <span class="text-[11px] text-slate-400 font-mono">${f.line_start ? 'Line ' + f.line_start : ''}</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed font-sans">${escapeHtml(f.description)}</p>
+            ${fixSnippetHtml}
+          `;
+          findingsList.appendChild(card);
+        });
+      }
+
+      // Developer Growth Tips
+      const growthSection = document.getElementById('growth-section');
+      const growthContent = document.getElementById('growth-tips-content');
+      const growthTips = analysis.growth_tips || [];
+      if (growthTips.length > 0) {
+        growthSection.classList.remove('hidden');
+        growthContent.innerHTML = growthTips.map(tip => `
+          <div class="text-xs space-y-1">
+            <strong class="text-indigo-200 font-medium">${escapeHtml(tip.topic)}:</strong>
+            <p class="text-slate-300">${escapeHtml(tip.advice)}</p>
+            ${tip.learning_resource ? `<a href="${tip.learning_resource}" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline inline-block text-[11px] mt-1">Read Best Practices Guide &rarr;</a>` : ''}
+          </div>
+        `).join('');
+      } else {
+        growthSection.classList.add('hidden');
+      }
+
+      // Reset rating stars
+      selectedRating = 0;
+      updateStarDisplay(0);
+      document.getElementById('send-feedback-btn').disabled = true;
+    }
+
+    // Rating star handler
+    function setRating(val) {
+      selectedRating = val;
+      updateStarDisplay(val);
+      document.getElementById('send-feedback-btn').disabled = false;
+    }
+
+    function updateStarDisplay(val) {
+      document.querySelectorAll('.star-btn').forEach(btn => {
+        const starVal = parseInt(btn.getAttribute('data-star'));
+        if (starVal <= val) {
+          btn.className = 'star-btn text-amber-400 text-base';
+        } else {
+          btn.className = 'star-btn text-slate-600 hover:text-amber-400 transition-colors text-base';
+        }
+      });
+    }
+
+    // Submit review feedback
+    async function submitFeedback() {
+      if (!currentReviewId || selectedRating === 0) return;
+      const btn = document.getElementById('send-feedback-btn');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      try {
+        const res = await fetch(`/api/v1/reviews/${currentReviewId}/feedback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Authenticated-User-Email': 'accounts.google.com:engineer@company.com'
+          },
+          body: JSON.stringify({ rating: selectedRating })
+        });
+
+        if (res.ok) {
+          btn.innerText = 'Saved! ✓';
+          btn.className = 'ml-2 px-2.5 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        } else {
+          btn.innerText = 'Error';
+        }
+      } catch (e) {
+        btn.innerText = 'Failed';
+      }
+    }
+
+    // Utilities
+    function copySnippet(id, btnElem) {
+      const code = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const orig = btnElem.innerText;
+        btnElem.innerText = 'Copied!';
+        setTimeout(() => { btnElem.innerText = orig; }, 1500);
+      });
+    }
+
+    function copyReviewSummary() {
+      if (!lastAnalysisResult) return;
+      const a = lastAnalysisResult.analysis || {};
+      const md = `### Code Review Report\n**Score:** ${a.overall_score}/100\n**Summary:** ${a.summary}\n**Findings:** ${(a.findings || []).length}\n`;
+      navigator.clipboard.writeText(md).then(() => {
+        const btn = document.getElementById('copy-summary-btn-text');
+        btn.innerText = 'Copied!';
+        setTimeout(() => { btn.innerText = 'Copy Summary'; }, 1500);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Load clean sample on initial load
+    loadSample('clean');
+  </script>
+</body>
+</html>
+
