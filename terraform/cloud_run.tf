@@ -40,7 +40,7 @@ resource "google_cloud_run_v2_service" "code_reviewer_api" {
       }
       env {
         name  = "GEMINI_MODEL"
-        value = "gemini-1.5-pro"
+        value = "gemini-3.8-flash"
       }
       env {
         name  = "BQ_DATASET_ID"

@@ -48,7 +48,7 @@ class ReviewAnalysisResult(BaseModel):
     style_nits: List[ReviewFinding] = Field(default_factory=list)
     noise_reduction_applied: bool = False
     growth_tips: List[GrowthTip] = Field(default_factory=list)
-    model_used: str = "gemini-1.5-pro"
+    model_used: str = "gemini-3.8-flash"
     evaluation_latency_ms: float = 0.0
     total_files_reviewed: Optional[int] = 1
     fast_path_files_count: Optional[int] = 0

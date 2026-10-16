@@ -184,12 +184,20 @@ class GeminiReviewEngine(BaseReviewEngine):
     def _get_client(self):
         if self._client is None:
             try:
+                import os
                 from google import genai
-                self._client = genai.Client(
-                    vertexai=True,
-                    project=self.settings.gcp_project_id,
-                    location=self.settings.gcp_location,
-                )
+
+                api_key = self.settings.gemini_api_key or os.environ.get("GEMINI_API_KEY")
+                if api_key:
+                    logger.info("Initializing Google GenAI Client with direct GEMINI_API_KEY")
+                    self._client = genai.Client(api_key=api_key)
+                else:
+                    logger.info("Initializing Google GenAI Client with Vertex AI backend")
+                    self._client = genai.Client(
+                        vertexai=True,
+                        project=self.settings.gcp_project_id,
+                        location=self.settings.gcp_location,
+                    )
             except Exception as e:
                 logger.warning(f"Could not initialize Google GenAI Client: {e}. Falling back to mock engine.")
                 self._client = None
@@ -215,48 +223,67 @@ class GeminiReviewEngine(BaseReviewEngine):
 
         from google.genai import types
 
-        # Retry loop for transient rate limits or network issues
-        max_retries = 3
+        # Build prioritized list of models to try
+        primary_model = self.settings.gemini_model or "gemini-3.8-flash"
+        candidate_models = [primary_model]
+        for fallback_model in ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
+            if fallback_model not in candidate_models:
+                candidate_models.append(fallback_model)
+
         last_exception = None
 
-        for attempt in range(max_retries):
-            try:
-                response = client.models.generate_content(
-                    model=self.settings.gemini_model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        response_mime_type="application/json",
-                        response_schema=ReviewAnalysisResult,
-                        temperature=self.settings.gemini_temperature,
-                        max_output_tokens=self.settings.gemini_max_output_tokens,
-                    ),
-                )
-                latency_ms = (time.time() - start_time) * 1000
-                result = ReviewAnalysisResult.model_validate_json(response.text)
-                result.evaluation_latency_ms = round(latency_ms, 2)
-                result.model_used = self.settings.gemini_model
+        for model_to_try in candidate_models:
+            max_retries = 2
+            model_not_found = False
 
-                # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
-                validator = FixValidator()
-                result.findings = validator.validate_and_sanitize_findings(result.findings, language)
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model=model_to_try,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_INSTRUCTION,
+                            response_mime_type="application/json",
+                            response_schema=ReviewAnalysisResult,
+                            temperature=self.settings.gemini_temperature,
+                            max_output_tokens=self.settings.gemini_max_output_tokens,
+                        ),
+                    )
+                    latency_ms = (time.time() - start_time) * 1000
+                    result = ReviewAnalysisResult.model_validate_json(response.text)
+                    result.evaluation_latency_ms = round(latency_ms, 2)
+                    result.model_used = model_to_try
 
-                # Apply intelligent noise reduction and nitpick consolidation
-                noise_filter = NoiseFilter()
-                return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
+                    # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
+                    validator = FixValidator()
+                    result.findings = validator.validate_and_sanitize_findings(result.findings, language)
 
-            except Exception as e:
-                last_exception = e
-                err_msg = str(e).lower()
-                if "credentials were not found" in err_msg or "default credentials" in err_msg:
-                    logger.info("ADC credentials not configured; falling back immediately to local review engine.")
-                    break
+                    # Apply intelligent noise reduction and nitpick consolidation
+                    noise_filter = NoiseFilter()
+                    return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
 
-                logger.warning(f"Gemini API attempt {attempt + 1} failed: {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
+                except Exception as e:
+                    last_exception = e
+                    err_msg = str(e).lower()
+                    if "404" in err_msg and ("not_found" in err_msg or "was not found" in err_msg or "not found" in err_msg):
+                        logger.warning(f"Model {model_to_try} returned 404 Not Found. Attempting fallback model...")
+                        model_not_found = True
+                        break
 
-        logger.error(f"Gemini analysis failed after {max_retries} retries: {last_exception}")
+                    if "credentials were not found" in err_msg or "default credentials" in err_msg:
+                        logger.info("ADC credentials not configured; falling back immediately to local review engine.")
+                        fallback = MockReviewEngine()
+                        return await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
+
+                    logger.warning(f"Gemini API attempt {attempt + 1} with {model_to_try} failed: {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+
+            if not model_not_found and last_exception:
+                # If the error was not a 404 (e.g. rate limit or bad request), don't cycle through other models
+                break
+
+        logger.error(f"Gemini analysis failed: {last_exception}")
         # Graceful fallback so API caller still gets structured feedback
         fallback = MockReviewEngine()
         res = await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
