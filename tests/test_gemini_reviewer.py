@@ -363,24 +363,25 @@ def test_gemini_35_plus_model_filter():
     assert is_gemini_35_plus("claude-3-opus") is False
 
 
-def test_gemini_config_rejects_sub_35_models():
-    """Verify Settings rejects any configured model lower than Gemini 3.5."""
+def test_gemini_config_upgrades_sub_35_models():
+    """Verify Settings auto-upgrades any configured model lower than Gemini 3.5 to gemini-3.8-flash."""
     from app.core.config import Settings
 
-    # Allowed models
+    # Allowed models preserved
     s1 = Settings(gemini_model="gemini-3.8-flash")
     assert s1.gemini_model == "gemini-3.8-flash"
     s2 = Settings(gemini_model="gemini-3.5-flash")
     assert s2.gemini_model == "gemini-3.5-flash"
 
-    # Disallowed models must raise ValidationError
-    with pytest.raises(Exception) as exc_info:
-        Settings(gemini_model="gemini-1.5-flash")
-    assert "Only Gemini 3.5 Flash and above models are permitted" in str(exc_info.value)
+    # Legacy models automatically upgraded to gemini-3.8-flash to prevent container startup crash
+    s_legacy1 = Settings(gemini_model="gemini-1.5-flash")
+    assert s_legacy1.gemini_model == "gemini-3.8-flash"
 
-    with pytest.raises(Exception) as exc_info:
-        Settings(gemini_model="gemini-2.0-flash")
-    assert "Only Gemini 3.5 Flash and above models are permitted" in str(exc_info.value)
+    s_legacy2 = Settings(gemini_model="gemini-2.0-flash")
+    assert s_legacy2.gemini_model == "gemini-3.8-flash"
+
+    s_legacy3 = Settings(gemini_model="gemini-1.5-flash-002")
+    assert s_legacy3.gemini_model == "gemini-3.8-flash"
 
 
 @pytest.mark.asyncio

@@ -33,9 +33,9 @@ class Settings(BaseSettings):
             name = v.split("/")[-1].lower().strip()
             match = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
             if match and float(match.group(1)) < 3.5:
-                raise ValueError(
-                    f"Model '{v}' is unsupported. Only Gemini 3.5 Flash and above models are permitted."
-                )
+                # If an existing environment (e.g. Cloud Run) provides a legacy model,
+                # gracefully auto-upgrade to gemini-3.8-flash instead of crashing container startup.
+                return "gemini-3.8-flash"
         return v
     gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")
     gemini_seed: Optional[int] = Field(default=42, alias="GEMINI_SEED")
