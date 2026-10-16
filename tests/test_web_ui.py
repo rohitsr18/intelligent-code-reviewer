@@ -59,6 +59,10 @@ def test_local_file_upload_ui_elements(client: TestClient):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
+    # Filename input is readonly (upload-only) and triggers picker
+    assert 'id="code-filename"' in html
+    assert 'readonly' in html
+    assert 'Upload only' in html
     # Filename local file picker input and button
     assert 'id="local-file-picker"' in html
     assert 'type="file"' in html
@@ -71,5 +75,21 @@ def test_local_file_upload_ui_elements(client: TestClient):
     # Feedback status pill and drag zone
     assert 'id="file-loaded-pill"' in html
     assert 'id="code-editor-zone"' in html
+
+
+def test_interactive_feedback_comment_ui_elements(client: TestClient):
+    """Verify rating feedback comment container exists and obsolete text is removed."""
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    # Star rating and feedback comment elements
+    assert 'id="star-rating"' in html
+    assert 'id="feedback-comment-container"' in html
+    assert 'id="feedback-comment"' in html
+    assert 'id="send-feedback-btn"' in html
+    assert 'id="rating-label"' in html
+    # Obsolete BigQuery training sentence must be removed
+    assert "Ratings train team-specific historical rules in BigQuery" not in html
+
 
 
