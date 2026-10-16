@@ -75,6 +75,20 @@ class SASTScanResponse(BaseModel):
     findings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class TestAuditRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+    language: str = Field(default="auto")
+
+
+class TestAuditResponse(BaseModel):
+    is_test_file: bool
+    total_test_cases: int
+    impacted_test_files: List[str] = Field(default_factory=list)
+    has_missing_coverage: bool = False
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -120,6 +134,7 @@ class ReviewSubmissionResponse(BaseModel):
     pruning_summary: Optional[Dict[str, Any]] = None
     dependency_audit: Optional[Dict[str, Any]] = None
     sast_summary: Optional[Dict[str, Any]] = None
+    test_audit_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -142,6 +157,7 @@ class ReviewDetailResponse(BaseModel):
     pruning_summary: Optional[Dict[str, Any]] = None
     dependency_audit: Optional[Dict[str, Any]] = None
     sast_summary: Optional[Dict[str, Any]] = None
+    test_audit_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

@@ -13,6 +13,8 @@ from app.api.v1.models import (
     DependencyAuditResponse,
     SASTScanRequest,
     SASTScanResponse,
+    TestAuditRequest,
+    TestAuditResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -30,6 +32,7 @@ from app.reviewer.batch_engine import BatchReviewEngine
 from app.reviewer.language_detector import LanguageDetector
 from app.reviewer.dependency_auditor import DependencyAuditor
 from app.reviewer.sast_scanner import SASTScanner
+from app.reviewer.test_auditor import TestHealthAuditor
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -154,6 +157,18 @@ async def submit_code_for_review(
     )
     sast_findings = sast_res.to_review_findings()
 
+    # 4.7 Test Health, Flakiness, and Coverage Auditor
+    test_auditor = TestHealthAuditor()
+    if "diff --git a/" in submission.code:
+        test_audit_res = test_auditor.audit_diff(submission.code)
+    else:
+        test_audit_res = test_auditor.audit_code(
+            code=code_to_review,
+            filename=submission.filename,
+            language=effective_language,
+        )
+    test_findings = test_audit_res.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -196,6 +211,10 @@ async def submit_code_for_review(
                 20, analysis.overall_score - int(sec_penalty * 0.6)
             )
 
+    # Inject test health and flakiness findings
+    if test_findings and analysis:
+        analysis.findings = analysis.findings + test_findings
+
     dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
     sast_summary = {
         "language": sast_res.language,
@@ -206,6 +225,14 @@ async def submit_code_for_review(
         "low_count": sast_res.low_count,
         "findings": [f.model_dump() for f in sast_res.findings],
     } if sast_res.total_findings > 0 else None
+
+    test_audit_summary = {
+        "is_test_file": test_audit_res.is_test_file,
+        "total_test_cases": test_audit_res.total_test_cases,
+        "impacted_test_files": test_audit_res.impacted_test_files,
+        "has_missing_coverage": test_audit_res.has_missing_coverage,
+        "findings": [f.model_dump() for f in test_audit_res.findings],
+    } if (test_audit_res.is_test_file or test_audit_res.findings) else None
 
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
@@ -264,6 +291,7 @@ async def submit_code_for_review(
         "pruning_summary": pruning_summary,
         "dependency_audit": dep_summary,
         "sast_summary": sast_summary,
+        "test_audit_summary": test_audit_summary,
         "analysis": analysis,
     }
 
@@ -288,6 +316,7 @@ async def submit_code_for_review(
         pruning_summary=pruning_summary,
         dependency_audit=dep_summary,
         sast_summary=sast_summary,
+        test_audit_summary=test_audit_summary,
         analysis=analysis,
     )
 
@@ -332,6 +361,29 @@ async def scan_sast_endpoint(
         high_count=res.high_count,
         medium_count=res.medium_count,
         low_count=res.low_count,
+        findings=[f.model_dump() for f in res.findings],
+    )
+
+
+@router.post(
+    "/audit-tests",
+    response_model=TestAuditResponse,
+    summary="Audit test suite health, flakiness, tautologies, and coverage impact",
+)
+async def audit_tests_endpoint(
+    req: TestAuditRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> TestAuditResponse:
+    auditor = TestHealthAuditor()
+    if "diff --git a/" in req.code:
+        res = auditor.audit_diff(req.code)
+    else:
+        res = auditor.audit_code(code=req.code, filename=req.filename, language=req.language)
+    return TestAuditResponse(
+        is_test_file=res.is_test_file,
+        total_test_cases=res.total_test_cases,
+        impacted_test_files=res.impacted_test_files,
+        has_missing_coverage=res.has_missing_coverage,
         findings=[f.model_dump() for f in res.findings],
     )
 
@@ -423,5 +475,6 @@ async def get_review_submission(
         pruning_summary=record.get("pruning_summary"),
         dependency_audit=record.get("dependency_audit"),
         sast_summary=record.get("sast_summary"),
+        test_audit_summary=record.get("test_audit_summary"),
         analysis=record.get("analysis"),
     )

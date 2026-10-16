@@ -32,6 +32,11 @@ from app.reviewer.sast_scanner import (
     SASTScanResult,
     SASTFinding,
 )
+from app.reviewer.test_auditor import (
+    TestHealthAuditor,
+    TestAuditResult,
+    TestHealthFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -54,6 +59,9 @@ __all__ = [
     "SASTScanner",
     "SASTScanResult",
     "SASTFinding",
+    "TestHealthAuditor",
+    "TestAuditResult",
+    "TestHealthFinding",
     "ReviewDeterministicCache",
     "canonicalize_review_result",
     "get_review_cache",
