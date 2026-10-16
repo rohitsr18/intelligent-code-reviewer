@@ -330,7 +330,7 @@
               </span>
               <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center space-x-1.5">
                 <span class="text-indigo-400">🧠</span>
-                <span id="meta-engine">gemini-1.5-pro</span>
+                <span id="meta-engine">gemini-3.8-flash</span>
               </span>
             </div>
 
@@ -852,7 +852,7 @@
       // Meta chips
       document.getElementById('summary-headline').innerText = analysis.summary || 'Review completed successfully.';
       document.getElementById('meta-latency').innerText = `${analysis.evaluation_latency_ms || 0} ms`;
-      document.getElementById('meta-engine').innerText = analysis.model_used || 'gemini-1.5-pro';
+      document.getElementById('meta-engine').innerText = analysis.model_used || 'gemini-3.8-flash';
       const speedup = analysis.parallel_speedup_factor || 1.0;
       document.getElementById('meta-speedup').innerText = `${speedup}x speedup`;
 

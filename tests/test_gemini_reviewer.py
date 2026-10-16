@@ -126,7 +126,7 @@ async def test_gemini_review_engine_with_mocked_genai_client(monkeypatch):
                 "advice": "Use functools.lru_cache for pure functions",
             }
         ],
-        "model_used": "gemini-1.5-pro",
+        "model_used": "gemini-3.8-flash",
         "evaluation_latency_ms": 120.0,
     }
 
@@ -142,7 +142,7 @@ async def test_gemini_review_engine_with_mocked_genai_client(monkeypatch):
     )
 
     assert result.overall_score == 88
-    assert result.model_used == "gemini-1.5-pro"
+    assert result.model_used == "gemini-3.8-flash"
     assert len(result.findings) == 1
     assert result.findings[0].category == FindingCategory.PERFORMANCE
     assert mock_client.models.generate_content.called
@@ -169,3 +169,57 @@ async def test_gemini_review_engine_retries_and_fallback(monkeypatch):
     # Must fallback gracefully to mock heuristic engine
     assert "[Fallback Review]" in result.summary
     assert result.critical_count >= 1
+
+
+def test_gemini_review_engine_client_init_with_api_key(monkeypatch):
+    """Verify that GEMINI_API_KEY initializes direct Google AI Studio client."""
+    from unittest.mock import patch
+
+    with patch("google.genai.Client") as mock_genai_client:
+        monkeypatch.setenv("GEMINI_API_KEY", "test-api-key-12345")
+        engine = GeminiReviewEngine()
+        engine.settings.gemini_api_key = "test-api-key-12345"
+        client = engine._get_client()
+
+        assert client is not None
+        mock_genai_client.assert_called_once_with(api_key="test-api-key-12345")
+
+
+@pytest.mark.asyncio
+async def test_gemini_review_engine_model_fallback_on_404(monkeypatch):
+    """Verify that 404 on primary model triggers fallback to next candidate model."""
+    engine = GeminiReviewEngine()
+    engine.settings.gemini_model = "gemini-3.8-flash"
+    mock_client = MagicMock()
+
+    calls = []
+
+    def mock_generate_content(model, contents, config):
+        calls.append(model)
+        if model == "gemini-3.8-flash":
+            raise RuntimeError("404 NOT_FOUND. Publisher model gemini-3.8-flash was not found")
+        # Fallback model succeeds
+        mock_resp = MagicMock()
+        mock_resp.text = json.dumps({
+            "overall_score": 92,
+            "summary": f"Reviewed using {model}",
+            "category_scores": {"bugs": 95, "security": 90},
+            "findings": [],
+            "growth_tips": [],
+            "model_used": model,
+        })
+        return mock_resp
+
+    mock_client.models.generate_content.side_effect = mock_generate_content
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    result = await engine.analyze(
+        code="def hello(): return 'world'",
+        language="python",
+    )
+
+    assert "gemini-3.8-flash" in calls
+    assert len(calls) >= 2  # Tried primary, then tried fallback model
+    assert result.overall_score == 92
+    assert "[Fallback Review]" not in result.summary
+

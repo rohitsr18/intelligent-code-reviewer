@@ -19,9 +19,10 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # GCP & Vertex / Gemini
+    gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
     gcp_project_id: str = Field(default="local-dev-project", alias="GCP_PROJECT_ID")
     gcp_location: str = Field(default="us-central1", alias="GCP_LOCATION")
-    gemini_model: str = Field(default="gemini-1.5-pro", alias="GEMINI_MODEL")
+    gemini_model: str = Field(default="gemini-3.8-flash", alias="GEMINI_MODEL")
     gemini_temperature: float = Field(default=0.2, alias="GEMINI_TEMPERATURE")
     gemini_max_output_tokens: int = Field(default=8192, alias="GEMINI_MAX_OUTPUT_TOKENS")
 
