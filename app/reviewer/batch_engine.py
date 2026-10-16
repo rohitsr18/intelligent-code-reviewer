@@ -306,9 +306,44 @@ class BatchReviewEngine:
             f"Achieved ~{speedup}x concurrent throughput speedup."
         )
 
+        # Compute composite verdict and executive metadata
+        merged_quick_wins = []
+        merged_key_risks = []
+        for _, res in results:
+            for qw in (res.quick_wins or []):
+                if qw not in merged_quick_wins:
+                    merged_quick_wins.append(qw)
+            for kr in (res.key_risks or []):
+                if kr not in merged_key_risks:
+                    merged_key_risks.append(kr)
+
+        has_critical = any(f.severity.value == "critical" for f in all_findings)
+        has_high = any(f.severity.value == "high" for f in all_findings)
+        if has_critical:
+            verdict = "REQUEST_CHANGES"
+            verdict_rationale = f"Action required: Critical issues identified across {len(results)} files must be remediated."
+            effort_estimate = "1 - 2 hours"
+        elif has_high:
+            verdict = "REQUEST_CHANGES"
+            verdict_rationale = f"High-priority defects identified across {len(results)} files require remediation."
+            effort_estimate = "30 - 45 minutes"
+        elif len(all_findings) > 0:
+            verdict = "COMMENT"
+            verdict_rationale = f"{len(all_findings)} non-blocking suggestions for code optimization."
+            effort_estimate = "15 minutes"
+        else:
+            verdict = "APPROVE"
+            verdict_rationale = "All files meet engineering standards with zero blocking issues."
+            effort_estimate = "0 minutes"
+
         return ReviewAnalysisResult(
             overall_score=overall_score,
             summary=summary,
+            verdict=verdict,
+            verdict_rationale=verdict_rationale,
+            quick_wins=merged_quick_wins[:5],
+            key_risks=merged_key_risks[:5],
+            effort_estimate=effort_estimate,
             category_scores=merged_scores,
             findings=all_findings,
             style_nits=all_style_nits,

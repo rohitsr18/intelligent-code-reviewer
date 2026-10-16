@@ -21,6 +21,12 @@ class FindingSeverity(str, Enum):
     INFO = "info"
 
 
+class ReviewVerdict(str, Enum):
+    APPROVE = "APPROVE"
+    REQUEST_CHANGES = "REQUEST_CHANGES"
+    COMMENT = "COMMENT"
+
+
 class ReviewFinding(BaseModel):
     category: FindingCategory
     severity: FindingSeverity
@@ -32,6 +38,8 @@ class ReviewFinding(BaseModel):
     rule_id: Optional[str] = None
     is_fix_valid: bool = True
     fix_validation_note: Optional[str] = None
+    impact: Optional[str] = None
+    fix_explanation: Optional[str] = None
 
 
 class GrowthTip(BaseModel):
@@ -43,11 +51,16 @@ class GrowthTip(BaseModel):
 class ReviewAnalysisResult(BaseModel):
     overall_score: int = Field(ge=0, le=100)
     summary: str
+    verdict: Optional[str] = None
+    verdict_rationale: Optional[str] = None
     category_scores: Dict[str, int] = Field(default_factory=dict)
     findings: List[ReviewFinding] = Field(default_factory=list)
     style_nits: List[ReviewFinding] = Field(default_factory=list)
     noise_reduction_applied: bool = False
     growth_tips: List[GrowthTip] = Field(default_factory=list)
+    quick_wins: List[str] = Field(default_factory=list)
+    key_risks: List[str] = Field(default_factory=list)
+    effort_estimate: Optional[str] = None
     model_used: str = "gemini-3.8-flash"
     evaluation_latency_ms: float = 0.0
     total_files_reviewed: Optional[int] = 1
