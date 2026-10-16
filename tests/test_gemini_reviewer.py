@@ -12,6 +12,8 @@ from app.reviewer.prompts import build_review_prompt, SYSTEM_INSTRUCTION
 from app.reviewer.engine import (
     MockReviewEngine,
     GeminiReviewEngine,
+    is_valid_gemini_model,
+    VALID_STABLE_GEMINI_MODELS,
     is_gemini_35_plus,
     SUPPORTED_GEMINI_35_PLUS_MODELS,
 )
@@ -226,12 +228,11 @@ async def test_gemini_review_engine_model_fallback_on_404(monkeypatch):
     assert "gemini-3.8-flash" in calls
     assert len(calls) >= 2  # Tried primary, then tried fallback model
     assert calls[0] == "gemini-3.8-flash"
-    assert calls[1] == "gemini-3.5-flash"
+    assert calls[1] == "gemini-3.6-flash"
     for m in calls:
-        assert is_gemini_35_plus(m) is True
-    assert "gemini-1.5-flash" not in calls
-    assert "gemini-2.0-flash" not in calls
-    assert "gemini-2.5-flash" not in calls
+        assert is_valid_gemini_model(m) is True
+    # Ensure non-existent model gemini-3.5-pro is NEVER queried
+    assert "gemini-3.5-pro" not in calls
     assert result.overall_score == 92
     assert "[Fallback Review]" not in result.summary
 
@@ -340,59 +341,54 @@ def test_canonicalize_review_result_dedup_and_sorting():
     assert canonical.findings[2].title == "Naming convention"
 
 
-def test_gemini_35_plus_model_filter():
-    """Verify is_gemini_35_plus identifies only 3.5+ models."""
-    from app.reviewer.engine import is_gemini_35_plus
+def test_valid_stable_gemini_model_filter():
+    """Verify is_valid_gemini_model identifies only valid, officially released models."""
+    from app.reviewer.engine import is_valid_gemini_model
 
-    # Supported >= 3.5 models
-    assert is_gemini_35_plus("gemini-3.8-flash") is True
-    assert is_gemini_35_plus("gemini-3.5-flash") is True
-    assert is_gemini_35_plus("gemini-3.5-pro") is True
-    assert is_gemini_35_plus("gemini-3.8-pro") is True
-    assert is_gemini_35_plus("publishers/google/models/gemini-3.8-flash") is True
-    assert is_gemini_35_plus("gemini-4.0-flash") is True
+    # Valid and officially released stable models from https://ai.google.dev/gemini-api/docs/models
+    assert is_valid_gemini_model("gemini-3.8-flash") is True
+    assert is_valid_gemini_model("gemini-3.6-flash") is True
+    assert is_valid_gemini_model("gemini-3.5-flash-lite") is True
+    assert is_valid_gemini_model("gemini-2.5-flash") is True
+    assert is_valid_gemini_model("gemini-2.5-pro") is True
+    assert is_valid_gemini_model("publishers/google/models/gemini-3.8-flash") is True
 
-    # Legacy models < 3.5 must be rejected
-    assert is_gemini_35_plus("gemini-2.5-flash") is False
-    assert is_gemini_35_plus("gemini-2.0-flash") is False
-    assert is_gemini_35_plus("gemini-1.5-flash") is False
-    assert is_gemini_35_plus("gemini-1.5-pro") is False
-    assert is_gemini_35_plus("gemini-1.0-pro") is False
-    assert is_gemini_35_plus(None) is False
-    assert is_gemini_35_plus("") is False
-    assert is_gemini_35_plus("claude-3-opus") is False
+    # Hallucinated or unreleased models must be rejected
+    assert is_valid_gemini_model("gemini-3.5-pro") is False
+    assert is_valid_gemini_model("gemini-3.5-flash") is False
+    assert is_valid_gemini_model(None) is False
+    assert is_valid_gemini_model("") is False
+    assert is_valid_gemini_model("claude-3-opus") is False
 
 
-def test_gemini_config_upgrades_sub_35_models():
-    """Verify Settings auto-upgrades any configured model lower than Gemini 3.5 to gemini-3.8-flash."""
+def test_gemini_config_handles_unreleased_models():
+    """Verify Settings defaults invalid/unreleased models safely to gemini-3.8-flash."""
     from app.core.config import Settings
 
-    # Allowed models preserved
+    # Valid models preserved
     s1 = Settings(gemini_model="gemini-3.8-flash")
     assert s1.gemini_model == "gemini-3.8-flash"
-    s2 = Settings(gemini_model="gemini-3.5-flash")
-    assert s2.gemini_model == "gemini-3.5-flash"
+    s2 = Settings(gemini_model="gemini-3.6-flash")
+    assert s2.gemini_model == "gemini-3.6-flash"
+    s3 = Settings(gemini_model="gemini-2.5-flash")
+    assert s3.gemini_model == "gemini-2.5-flash"
 
-    # Legacy models automatically upgraded to gemini-3.8-flash to prevent container startup crash
-    s_legacy1 = Settings(gemini_model="gemini-1.5-flash")
-    assert s_legacy1.gemini_model == "gemini-3.8-flash"
+    # Fictitious or unreleased models (e.g. 3.5-pro) automatically fall back to gemini-3.8-flash
+    s_fictitious1 = Settings(gemini_model="gemini-3.5-pro")
+    assert s_fictitious1.gemini_model == "gemini-3.8-flash"
 
-    s_legacy2 = Settings(gemini_model="gemini-2.0-flash")
-    assert s_legacy2.gemini_model == "gemini-3.8-flash"
-
-    s_legacy3 = Settings(gemini_model="gemini-1.5-flash-002")
-    assert s_legacy3.gemini_model == "gemini-3.8-flash"
+    s_fictitious2 = Settings(gemini_model="gemini-3.5-flash")
+    assert s_fictitious2.gemini_model == "gemini-3.8-flash"
 
 
 @pytest.mark.asyncio
-async def test_gemini_engine_upgrades_sub_35_models_safely(monkeypatch):
-    """Verify GeminiReviewEngine ignores any forced sub-3.5 model and defaults to gemini-3.8-flash."""
+async def test_gemini_engine_sanitizes_unreleased_models(monkeypatch):
+    """Verify GeminiReviewEngine ignores any forced unreleased model and defaults to gemini-3.8-flash."""
     from app.reviewer.engine import GeminiReviewEngine
 
     engine = GeminiReviewEngine()
     engine.settings.gemini_api_key = "dummy-key"
-    # Force a legacy model on settings bypassing pydantic validation
-    object.__setattr__(engine.settings, "gemini_model", "gemini-1.5-flash")
+    object.__setattr__(engine.settings, "gemini_model", "gemini-3.5-pro")
 
     mock_client = MagicMock()
     called_models = []
@@ -415,7 +411,7 @@ async def test_gemini_engine_upgrades_sub_35_models_safely(monkeypatch):
 
     result = await engine.analyze(code="print('test')", language="python")
 
-    assert "gemini-1.5-flash" not in called_models
+    assert "gemini-3.5-pro" not in called_models
     assert called_models[0] == "gemini-3.8-flash"
     assert result.model_used == "gemini-3.8-flash"
 

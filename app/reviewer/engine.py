@@ -28,30 +28,27 @@ SEVERITY_ORDER = {
     FindingSeverity.INFO: 4,
 }
 
-SUPPORTED_GEMINI_35_PLUS_MODELS = [
+# Valid and stable officially released Gemini models from https://ai.google.dev/gemini-api/docs/models
+VALID_STABLE_GEMINI_MODELS = [
     "gemini-3.8-flash",
-    "gemini-3.5-flash",
-    "gemini-3.8-pro",
-    "gemini-3.5-pro",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
 ]
 
 
-def is_gemini_35_plus(model_name: Optional[str]) -> bool:
-    """Check if model is Gemini 3.5 Flash or higher."""
+def is_valid_gemini_model(model_name: Optional[str]) -> bool:
+    """Check if model is a recognized, valid, and stably released Gemini model."""
     if not model_name:
         return False
     name = model_name.split("/")[-1].lower().strip()
-    if name in SUPPORTED_GEMINI_35_PLUS_MODELS:
-        return True
-    import re
-    match = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
-    if not match:
-        return False
-    try:
-        version = float(match.group(1))
-        return version >= 3.5
-    except ValueError:
-        return False
+    return any(name.startswith(valid) for valid in VALID_STABLE_GEMINI_MODELS)
+
+
+# Backward-compatibility aliases
+SUPPORTED_GEMINI_35_PLUS_MODELS = VALID_STABLE_GEMINI_MODELS
+is_gemini_35_plus = is_valid_gemini_model
 
 
 def canonicalize_review_result(result: ReviewAnalysisResult) -> ReviewAnalysisResult:
@@ -365,18 +362,18 @@ class GeminiReviewEngine(BaseReviewEngine):
 
         from google.genai import types
 
-        # Build prioritized list of models to try - strictly Gemini 3.5 Flash and above
+        # Build prioritized list of models to try - strictly valid and stable released Gemini models
         primary_model = self.settings.gemini_model or "gemini-3.8-flash"
-        if not is_gemini_35_plus(primary_model):
+        if not is_valid_gemini_model(primary_model):
             logger.warning(
-                "Configured model '%s' is below Gemini 3.5. Defaulting to gemini-3.8-flash.",
+                "Configured model '%s' is not a recognized stable release. Defaulting to gemini-3.8-flash.",
                 primary_model,
             )
             primary_model = "gemini-3.8-flash"
 
         candidate_models = [primary_model]
-        for fallback_model in SUPPORTED_GEMINI_35_PLUS_MODELS:
-            if fallback_model not in candidate_models and is_gemini_35_plus(fallback_model):
+        for fallback_model in VALID_STABLE_GEMINI_MODELS:
+            if fallback_model not in candidate_models:
                 candidate_models.append(fallback_model)
 
         last_exception = None

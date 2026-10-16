@@ -31,10 +31,16 @@ class Settings(BaseSettings):
     def validate_gemini_model(cls, v: str) -> str:
         if v:
             name = v.split("/")[-1].lower().strip()
-            match = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
-            if match and float(match.group(1)) < 3.5:
-                # If an existing environment (e.g. Cloud Run) provides a legacy model,
-                # gracefully auto-upgrade to gemini-3.8-flash instead of crashing container startup.
+            valid_bases = (
+                "gemini-3.8-flash",
+                "gemini-3.6-flash",
+                "gemini-3.5-flash-lite",
+                "gemini-2.5-flash",
+                "gemini-2.5-pro",
+                "gemini-4-argon",
+            )
+            if not any(name.startswith(base) for base in valid_bases):
+                # Fall back safely to stable default if an invalid/unreleased model (e.g. 3.5-pro) is provided
                 return "gemini-3.8-flash"
         return v
     gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")

@@ -16,6 +16,8 @@ from app.reviewer.engine import (
     get_review_cache,
     SUPPORTED_GEMINI_35_PLUS_MODELS,
     is_gemini_35_plus,
+    VALID_STABLE_GEMINI_MODELS,
+    is_valid_gemini_model,
 )
 
 from app.reviewer.batch_engine import BatchReviewEngine, FileDiffUnit
@@ -49,4 +51,6 @@ __all__ = [
     "get_review_cache",
     "SUPPORTED_GEMINI_35_PLUS_MODELS",
     "is_gemini_35_plus",
+    "VALID_STABLE_GEMINI_MODELS",
+    "is_valid_gemini_model",
 ]
