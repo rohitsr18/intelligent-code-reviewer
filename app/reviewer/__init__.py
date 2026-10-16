@@ -14,6 +14,12 @@ from app.reviewer.engine import (
 )
 
 from app.reviewer.batch_engine import BatchReviewEngine, FileDiffUnit
+from app.reviewer.dependency_auditor import (
+    DependencyAuditor,
+    DependencyAuditResult,
+    DiscoveredDependency,
+    DependencyFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -29,4 +35,8 @@ __all__ = [
     "get_review_engine",
     "BatchReviewEngine",
     "FileDiffUnit",
+    "DependencyAuditor",
+    "DependencyAuditResult",
+    "DiscoveredDependency",
+    "DependencyFinding",
 ]

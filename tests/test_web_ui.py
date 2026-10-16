@@ -53,3 +53,23 @@ def test_missing_ui_file_returns_404(client: TestClient):
         assert response.status_code == 404
         assert response.json()["detail"] == "Web UI not found"
 
+
+def test_local_file_upload_ui_elements(client: TestClient):
+    """Verify local file upload and editor auto-fetch elements are present in the UI."""
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    # Filename local file picker input and button
+    assert 'id="local-file-picker"' in html
+    assert 'type="file"' in html
+    assert 'triggerLocalFilePicker()' in html
+    assert 'Upload File' in html
+    # File reader and auto-fetch logic
+    assert 'handleLocalFileSelected' in html
+    assert 'loadCodeFromFile' in html
+    assert 'FileReader' in html
+    # Feedback status pill and drag zone
+    assert 'id="file-loaded-pill"' in html
+    assert 'id="code-editor-zone"' in html
+
+

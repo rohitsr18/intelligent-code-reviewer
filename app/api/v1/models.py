@@ -44,6 +44,21 @@ class LanguageDetectResponse(BaseModel):
     supported_languages: List[str] = Field(default_factory=list)
 
 
+class DependencyAuditRequest(BaseModel):
+    manifest_content: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+
+
+class DependencyAuditResponse(BaseModel):
+    manifest_type: Optional[str] = None
+    is_manifest: bool
+    total_dependencies_scanned: int
+    vulnerable_packages_count: int
+    license_violations_count: int
+    dependencies: List[Dict[str, Any]] = Field(default_factory=list)
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -87,6 +102,7 @@ class ReviewSubmissionResponse(BaseModel):
     detected_by: Optional[str] = None
     rules_applied_count: int = 0
     pruning_summary: Optional[Dict[str, Any]] = None
+    dependency_audit: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -107,6 +123,7 @@ class ReviewDetailResponse(BaseModel):
     feedback: Optional[Dict[str, Any]] = None
     session_id: Optional[str] = None
     pruning_summary: Optional[Dict[str, Any]] = None
+    dependency_audit: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

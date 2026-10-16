@@ -9,6 +9,8 @@ from app.api.v1.models import (
     RedactionSummary,
     LanguageDetectRequest,
     LanguageDetectResponse,
+    DependencyAuditRequest,
+    DependencyAuditResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -24,6 +26,7 @@ from app.storage.models import ReviewDocument
 from app.reviewer.diff_pruner import DiffPruner
 from app.reviewer.batch_engine import BatchReviewEngine
 from app.reviewer.language_detector import LanguageDetector
+from app.reviewer.dependency_auditor import DependencyAuditor
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -131,6 +134,14 @@ async def submit_code_for_review(
     active_rules = await learning_service.get_enrichment_rules(language=effective_language)
     prompt_rules = learning_service.format_rules_for_prompt(active_rules)
 
+    # 4.5 Dependency & License Auditing
+    dep_auditor = DependencyAuditor()
+    dep_audit_res = dep_auditor.audit_dependencies(
+        code_or_diff=submission.code,
+        filename=submission.filename,
+    )
+    dep_findings = dep_audit_res.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -149,6 +160,19 @@ async def submit_code_for_review(
             rules=prompt_rules,
             min_severity=submission.min_severity,
         )
+
+    # Inject dependency audit findings & calibrate security score
+    if dep_findings and analysis:
+        analysis.findings = dep_findings + analysis.findings
+        if dep_audit_res.vulnerable_packages_count > 0:
+            analysis.category_scores["security"] = max(
+                20, analysis.category_scores.get("security", 90) - (dep_audit_res.vulnerable_packages_count * 25)
+            )
+            analysis.overall_score = max(
+                25, analysis.overall_score - (dep_audit_res.vulnerable_packages_count * 15)
+            )
+
+    dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
 
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
@@ -205,6 +229,7 @@ async def submit_code_for_review(
         "flags": guard_result.flags,
         "rules_applied_count": len(prompt_rules),
         "pruning_summary": pruning_summary,
+        "dependency_audit": dep_summary,
         "analysis": analysis,
     }
 
@@ -227,7 +252,30 @@ async def submit_code_for_review(
         detected_by=detect_res.detected_by,
         rules_applied_count=len(prompt_rules),
         pruning_summary=pruning_summary,
+        dependency_audit=dep_summary,
         analysis=analysis,
+    )
+
+
+@router.post(
+    "/audit-dependencies",
+    response_model=DependencyAuditResponse,
+    summary="Audit package manifest dependencies for CVEs and copyleft license risks",
+)
+async def audit_dependencies_endpoint(
+    req: DependencyAuditRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> DependencyAuditResponse:
+    auditor = DependencyAuditor()
+    res = auditor.audit_dependencies(req.manifest_content, filename=req.filename)
+    return DependencyAuditResponse(
+        manifest_type=res.manifest_type,
+        is_manifest=res.is_manifest,
+        total_dependencies_scanned=res.total_dependencies_scanned,
+        vulnerable_packages_count=res.vulnerable_packages_count,
+        license_violations_count=res.license_violations_count,
+        dependencies=[d.model_dump() for d in res.dependencies],
+        findings=[f.model_dump() for f in res.findings],
     )
 
 
@@ -315,5 +363,6 @@ async def get_review_submission(
         is_safe_prompt=record["is_safe_prompt"],
         flags=record.get("flags", []),
         rules_applied_count=record.get("rules_applied_count", 0),
+        dependency_audit=record.get("dependency_audit"),
         analysis=record.get("analysis"),
     )

@@ -184,8 +184,24 @@
           </div>
 
           <div>
-            <label for="code-filename" class="block text-xs font-medium text-slate-300 mb-1.5">Filename</label>
-            <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-surface-300/90 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-mono transition-all placeholder:text-slate-600" placeholder="e.g. auth.py">
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="code-filename" class="block text-xs font-medium text-slate-300">Filename</label>
+              <button type="button" onclick="triggerLocalFilePicker()" class="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors group cursor-pointer" title="Browse and load a file from your local device">
+                <svg class="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>Upload File</span>
+              </button>
+            </div>
+            <div class="relative flex items-center">
+              <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-surface-300/90 border border-white/10 rounded-xl pl-3 pr-10 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-mono transition-all placeholder:text-slate-600" placeholder="e.g. auth.py">
+              <button type="button" onclick="triggerLocalFilePicker()" class="absolute right-1.5 p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" title="Choose file from local device" aria-label="Choose local file">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+              <input type="file" id="local-file-picker" class="hidden" onchange="handleLocalFileSelected(event)">
+            </div>
           </div>
         </div>
 
@@ -194,12 +210,13 @@
           <div class="flex items-center justify-between pb-2">
             <span class="text-xs font-medium text-slate-400">Editor Input</span>
             <div class="flex items-center space-x-2">
+              <span id="file-loaded-pill" class="hidden text-[10px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full items-center gap-1 transition-all"></span>
               <span id="line-counter" class="text-[11px] font-mono text-slate-500">1 line</span>
               <button type="button" onclick="clearEditor()" class="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
             </div>
           </div>
           
-          <div class="relative flex-1 flex flex-col rounded-xl overflow-hidden border border-white/[0.08] focus-within:border-indigo-500/60 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all bg-surface-300/80">
+          <div id="code-editor-zone" class="relative flex-1 flex flex-col rounded-xl overflow-hidden border border-white/[0.08] focus-within:border-indigo-500/60 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all bg-surface-300/80">
             <textarea id="code-input" spellcheck="false" class="w-full flex-1 bg-transparent p-3.5 text-xs text-slate-200 font-mono resize-none focus:outline-none custom-scrollbar leading-relaxed" placeholder="// Paste source code, patch, or unified git diff here...
 // The reviewer automatically scrubs secrets, prunes lockfiles, and verifies fixes!"></textarea>
           </div>
@@ -460,6 +477,11 @@
     function clearEditor() {
       document.getElementById('code-input').value = '';
       document.getElementById('auto-detect-badge').classList.add('hidden');
+      const pill = document.getElementById('file-loaded-pill');
+      if (pill) {
+        pill.classList.add('hidden');
+        pill.classList.remove('inline-flex');
+      }
       updateLineCounter();
     }
 
@@ -467,6 +489,127 @@
       const text = document.getElementById('code-input').value;
       const lines = text ? text.split('\n').length : 0;
       document.getElementById('line-counter').innerText = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
+    }
+
+    // Local File Picker & Auto-Fetch into Editor
+    function triggerLocalFilePicker() {
+      const picker = document.getElementById('local-file-picker');
+      if (picker) {
+        picker.value = '';
+        picker.click();
+      }
+    }
+
+    function handleLocalFileSelected(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+      loadCodeFromFile(files[0]);
+    }
+
+    function loadCodeFromFile(file) {
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+
+        // 1. Update Filename field
+        const filenameInput = document.getElementById('code-filename');
+        if (filenameInput) {
+          filenameInput.value = file.name;
+        }
+
+        // 2. Fetch code into Editor
+        const editor = document.getElementById('code-input');
+        if (editor) {
+          editor.value = content;
+        }
+        updateLineCounter();
+
+        // 3. Auto-select language based on file extension
+        applyLanguageFromFilename(file.name);
+
+        // 4. Trigger auto-detection endpoint
+        scheduleAutoDetect();
+
+        // 5. Visual confirmation pill
+        const lineCount = content ? content.split('\n').length : 0;
+        showFileLoadedStatus(file.name, lineCount);
+      };
+
+      reader.onerror = function() {
+        alert('Could not read the selected local file. Please try another file.');
+      };
+
+      reader.readAsText(file);
+    }
+
+    function applyLanguageFromFilename(filename) {
+      if (userManuallySelectedLanguage) return;
+      const lower = filename.toLowerCase();
+      const extMap = {
+        '.py': 'python',
+        '.js': 'javascript',
+        '.mjs': 'javascript',
+        '.cjs': 'javascript',
+        '.ts': 'typescript',
+        '.tsx': 'typescript',
+        '.jsx': 'javascript',
+        '.go': 'go',
+        '.java': 'java',
+        '.rs': 'rust',
+        '.cpp': 'cpp',
+        '.cc': 'cpp',
+        '.cxx': 'cpp',
+        '.c': 'c',
+        '.h': 'c',
+        '.hpp': 'cpp',
+        '.cs': 'csharp',
+        '.rb': 'ruby',
+        '.php': 'php',
+        '.sql': 'sql',
+        '.html': 'html',
+        '.htm': 'html',
+        '.css': 'css',
+        '.yaml': 'yaml',
+        '.yml': 'yaml',
+        '.json': 'json',
+        '.sh': 'bash',
+        '.bash': 'bash',
+        '.zsh': 'bash',
+        '.kt': 'kotlin',
+        '.kts': 'kotlin',
+        '.swift': 'swift'
+      };
+
+      let matched = null;
+      if (lower.endsWith('dockerfile')) {
+        matched = 'dockerfile';
+      } else {
+        for (const [ext, lang] of Object.entries(extMap)) {
+          if (lower.endsWith(ext)) {
+            matched = lang;
+            break;
+          }
+        }
+      }
+
+      const select = document.getElementById('code-language');
+      if (matched && select) {
+        select.value = matched;
+      }
+    }
+
+    function showFileLoadedStatus(filename, lineCount) {
+      const pill = document.getElementById('file-loaded-pill');
+      if (!pill) return;
+      pill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span><span>Loaded ${escapeHtml(filename)} (${lineCount}L)</span>`;
+      pill.classList.remove('hidden');
+      pill.classList.add('inline-flex');
+      setTimeout(() => {
+        pill.classList.add('hidden');
+        pill.classList.remove('inline-flex');
+      }, 4000);
     }
 
     // Keyboard Shortcuts: Cmd/Ctrl + Enter to Submit Review, Tab key indentation
@@ -489,6 +632,38 @@
       scheduleAutoDetect();
     });
     document.getElementById('code-filename').addEventListener('input', scheduleAutoDetect);
+
+    // Drag and Drop local file directly into editor or filename
+    const dropZones = [document.getElementById('code-editor-zone'), document.getElementById('code-filename')];
+    dropZones.forEach(zone => {
+      if (!zone) return;
+      ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = document.getElementById('code-editor-zone');
+          if (target) {
+            target.classList.add('ring-2', 'ring-indigo-500/80', 'border-indigo-500');
+          }
+        });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = document.getElementById('code-editor-zone');
+          if (target) {
+            target.classList.remove('ring-2', 'ring-indigo-500/80', 'border-indigo-500');
+          }
+        });
+      });
+      zone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+          loadCodeFromFile(dt.files[0]);
+        }
+      });
+    });
 
     function onLanguageManualChange() {
       const select = document.getElementById('code-language');
