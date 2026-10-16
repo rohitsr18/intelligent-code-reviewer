@@ -416,4 +416,118 @@ async def test_gemini_engine_sanitizes_unreleased_models(monkeypatch):
     assert result.model_used == "gemini-3.8-flash"
 
 
+@pytest.mark.asyncio
+async def test_gemini_engine_fast_paths_discovered_working_model(monkeypatch):
+    """Verify engine caches working model and skips 404 models on subsequent requests."""
+    from app.reviewer.engine import GeminiReviewEngine
+
+    engine = GeminiReviewEngine()
+    engine.settings.gemini_model = "gemini-3.8-flash"
+    mock_client = MagicMock()
+
+    calls = []
+
+    def mock_generate_content(model, contents, config):
+        calls.append(model)
+        if model == "gemini-3.8-flash":
+            raise RuntimeError("404 NOT_FOUND. Model gemini-3.8-flash not found")
+        mock_resp = MagicMock()
+        mock_resp.text = json.dumps({
+            "overall_score": 95,
+            "summary": "Great code",
+            "category_scores": {"bugs": 95},
+            "findings": [],
+            "growth_tips": [],
+            "model_used": model,
+        })
+        return mock_resp
+
+    mock_client.models.generate_content.side_effect = mock_generate_content
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    # First request: 3.8-flash fails with 404, falls back to 3.6-flash
+    res1 = await engine.analyze(code="def f(): pass", language="python")
+    assert res1.model_used == "gemini-3.6-flash"
+    assert calls == ["gemini-3.8-flash", "gemini-3.6-flash"]
+    assert engine._discovered_working_model == "gemini-3.6-flash"
+    assert "gemini-3.8-flash" in engine._unavailable_models
+
+    # Second request: immediately uses 3.6-flash without trying 3.8-flash again!
+    calls.clear()
+    res2 = await engine.analyze(code="def g(): pass", language="python")
+    assert res2.model_used == "gemini-3.6-flash"
+    assert calls == ["gemini-3.6-flash"]  # 0 ms wasted on 404!
+
+
+@pytest.mark.asyncio
+async def test_gemini_engine_thinking_budget_applied_in_config(monkeypatch):
+    """Verify thinking_budget is configured in GenerateContentConfig."""
+    from app.reviewer.engine import GeminiReviewEngine
+
+    engine = GeminiReviewEngine()
+    engine.settings.gemini_thinking_budget = 0
+    mock_client = MagicMock()
+
+    captured_config = []
+
+    def mock_generate_content(model, contents, config):
+        captured_config.append(config)
+        mock_resp = MagicMock()
+        mock_resp.text = json.dumps({
+            "overall_score": 90,
+            "summary": "Pass",
+            "category_scores": {"bugs": 90},
+            "findings": [],
+            "growth_tips": [],
+            "model_used": model,
+        })
+        return mock_resp
+
+    mock_client.models.generate_content.side_effect = mock_generate_content
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    await engine.analyze(code="print('speed test')", language="python")
+
+    assert len(captured_config) == 1
+    cfg = captured_config[0]
+    assert cfg.thinking_config is not None
+    assert cfg.thinking_config.thinking_budget == 0
+
+
+@pytest.mark.asyncio
+async def test_gemini_engine_retries_if_thinking_config_unsupported(monkeypatch):
+    """Verify engine gracefully retries without thinking_config if model rejects it."""
+    from app.reviewer.engine import GeminiReviewEngine
+
+    engine = GeminiReviewEngine()
+    mock_client = MagicMock()
+
+    attempts = []
+
+    def mock_generate_content(model, contents, config):
+        attempts.append(config)
+        if getattr(config, "thinking_config", None) is not None:
+            raise RuntimeError("400 Bad Request. Thinking is not supported for this model")
+        mock_resp = MagicMock()
+        mock_resp.text = json.dumps({
+            "overall_score": 90,
+            "summary": "Recovered",
+            "category_scores": {"bugs": 90},
+            "findings": [],
+            "growth_tips": [],
+            "model_used": model,
+        })
+        return mock_resp
+
+    mock_client.models.generate_content.side_effect = mock_generate_content
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    res = await engine.analyze(code="print('recovery test')", language="python")
+    assert res.overall_score == 90
+    assert len(attempts) == 2
+    assert attempts[0].thinking_config is not None
+    assert getattr(attempts[1], "thinking_config", None) is None
+
+
+
 

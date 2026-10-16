@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -299,6 +300,8 @@ class GeminiReviewEngine(BaseReviewEngine):
         self.settings = get_settings()
         self._client = None
         self.cache = _global_review_cache
+        self._discovered_working_model: Optional[str] = None
+        self._unavailable_models: set = set()
 
     def _get_client(self):
         if self._client is None:
@@ -321,6 +324,26 @@ class GeminiReviewEngine(BaseReviewEngine):
                 logger.warning(f"Could not initialize Google GenAI Client: {e}. Falling back to mock engine.")
                 self._client = None
         return self._client
+
+    async def _generate_content_async(self, client, model: str, contents: str, config):
+        """Invoke content generation asynchronously without blocking the event loop."""
+        if hasattr(client, "aio") and hasattr(client.aio, "models") and hasattr(client.aio.models, "generate_content"):
+            import inspect
+            if inspect.iscoroutinefunction(client.aio.models.generate_content):
+                return await client.aio.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=config,
+                )
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            ),
+        )
 
     async def analyze(
         self,
@@ -362,7 +385,12 @@ class GeminiReviewEngine(BaseReviewEngine):
 
         from google.genai import types
 
-        # Build prioritized list of models to try - strictly valid and stable released Gemini models
+        # Build prioritized list of models to try
+        # Fast path: If a working model was already discovered in this environment, try it first to eliminate 404 delays
+        candidate_models = []
+        if self._discovered_working_model and self._discovered_working_model not in self._unavailable_models:
+            candidate_models.append(self._discovered_working_model)
+
         primary_model = self.settings.gemini_model or "gemini-3.8-flash"
         if not is_valid_gemini_model(primary_model):
             logger.warning(
@@ -371,16 +399,24 @@ class GeminiReviewEngine(BaseReviewEngine):
             )
             primary_model = "gemini-3.8-flash"
 
-        candidate_models = [primary_model]
+        if primary_model not in candidate_models and primary_model not in self._unavailable_models:
+            candidate_models.append(primary_model)
+
         for fallback_model in VALID_STABLE_GEMINI_MODELS:
-            if fallback_model not in candidate_models:
+            if fallback_model not in candidate_models and fallback_model not in self._unavailable_models:
                 candidate_models.append(fallback_model)
+
+        # Safeguard: if all known models were marked unavailable, reset cache and try all
+        if not candidate_models:
+            self._unavailable_models.clear()
+            candidate_models = [primary_model] + [m for m in VALID_STABLE_GEMINI_MODELS if m != primary_model]
 
         last_exception = None
 
         for model_to_try in candidate_models:
             max_retries = 2
             model_not_found = False
+            use_thinking = True
 
             for attempt in range(max_retries):
                 try:
@@ -389,12 +425,22 @@ class GeminiReviewEngine(BaseReviewEngine):
                         "response_mime_type": "application/json",
                         "response_schema": ReviewAnalysisResult,
                         "temperature": self.settings.gemini_temperature,
-                        "max_output_tokens": self.settings.gemini_max_output_tokens,
+                        "max_output_tokens": min(self.settings.gemini_max_output_tokens, 4096),
                     }
                     if self.settings.gemini_seed is not None:
                         config_kwargs["seed"] = self.settings.gemini_seed
 
-                    response = client.models.generate_content(
+                    # Attach ThinkingConfig if configured (0 disables extended reasoning for sub-second review speed)
+                    if use_thinking and self.settings.gemini_thinking_budget is not None and hasattr(types, "ThinkingConfig"):
+                        try:
+                            config_kwargs["thinking_config"] = types.ThinkingConfig(
+                                thinking_budget=self.settings.gemini_thinking_budget
+                            )
+                        except Exception as tc_err:
+                            logger.debug("Could not initialize ThinkingConfig: %s", tc_err)
+
+                    response = await self._generate_content_async(
+                        client=client,
                         model=model_to_try,
                         contents=prompt,
                         config=types.GenerateContentConfig(**config_kwargs),
@@ -403,6 +449,9 @@ class GeminiReviewEngine(BaseReviewEngine):
                     result = ReviewAnalysisResult.model_validate_json(response.text)
                     result.evaluation_latency_ms = round(latency_ms, 2)
                     result.model_used = model_to_try
+
+                    # Mark model as discovered working model for future calls
+                    self._discovered_working_model = model_to_try
 
                     # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
                     validator = FixValidator()
@@ -424,9 +473,19 @@ class GeminiReviewEngine(BaseReviewEngine):
                 except Exception as e:
                     last_exception = e
                     err_msg = str(e).lower()
+
+                    # If model rejected thinking_config, retry immediately without it
+                    if "thinking" in err_msg and use_thinking:
+                        logger.warning(f"Model {model_to_try} does not support thinking_config. Retrying without it...")
+                        use_thinking = False
+                        continue
+
                     if "404" in err_msg and ("not_found" in err_msg or "was not found" in err_msg or "not found" in err_msg):
-                        logger.warning(f"Model {model_to_try} returned 404 Not Found. Attempting fallback model...")
+                        logger.warning(f"Model {model_to_try} returned 404 Not Found. Marking unavailable and attempting fallback...")
                         model_not_found = True
+                        self._unavailable_models.add(model_to_try)
+                        if self._discovered_working_model == model_to_try:
+                            self._discovered_working_model = None
                         break
 
                     if "credentials were not found" in err_msg or "default credentials" in err_msg:
@@ -439,7 +498,7 @@ class GeminiReviewEngine(BaseReviewEngine):
 
                     logger.warning(f"Gemini API attempt {attempt + 1} with {model_to_try} failed: {e}")
                     if attempt < max_retries - 1:
-                        time.sleep(1)
+                        await asyncio.sleep(0.5)
 
             if not model_not_found and last_exception:
                 # If the error was not a 404 (e.g. rate limit or bad request), don't cycle through other models

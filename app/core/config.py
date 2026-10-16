@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")
     gemini_seed: Optional[int] = Field(default=42, alias="GEMINI_SEED")
     gemini_max_output_tokens: int = Field(default=8192, alias="GEMINI_MAX_OUTPUT_TOKENS")
+    gemini_thinking_budget: Optional[int] = Field(
+        default=0,
+        alias="GEMINI_THINKING_BUDGET",
+        description="Thinking token budget. 0 disables extended reasoning for sub-second review generation.",
+    )
     review_cache_enabled: bool = Field(default=True, alias="REVIEW_CACHE_ENABLED")
     review_cache_capacity: int = Field(default=512, alias="REVIEW_CACHE_CAPACITY")
 
