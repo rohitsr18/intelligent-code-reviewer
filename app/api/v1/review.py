@@ -17,6 +17,8 @@ from app.api.v1.models import (
     TestAuditResponse,
     IntentSweepRequest,
     IntentSweepResponse,
+    ContractDriftRequest,
+    ContractDriftResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -36,6 +38,7 @@ from app.reviewer.dependency_auditor import DependencyAuditor
 from app.reviewer.sast_scanner import SASTScanner
 from app.reviewer.test_auditor import TestHealthAuditor
 from app.reviewer.intent_sweeper import IntentArtifactSweeper
+from app.reviewer.schema_drift_detector import SchemaContractDriftDetector
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -182,6 +185,15 @@ async def submit_code_for_review(
     )
     intent_findings = intent_report.to_review_findings()
 
+    # 4.9 Schema & API Contract Drift Detector
+    drift_detector = SchemaContractDriftDetector()
+    drift_res = drift_detector.detect_drift(
+        code_or_diff=submission.code,
+        filename=submission.filename,
+        language=effective_language,
+    )
+    drift_findings = drift_res.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -232,6 +244,18 @@ async def submit_code_for_review(
     if intent_findings and analysis:
         analysis.findings = analysis.findings + intent_findings
 
+    # Inject schema and contract drift findings
+    if drift_findings and analysis:
+        analysis.findings = analysis.findings + drift_findings
+        if drift_res.has_breaking_changes:
+            penalty = drift_res.breaking_changes_count * 20
+            analysis.category_scores["architecture"] = max(
+                15, analysis.category_scores.get("architecture", 90) - penalty
+            )
+            analysis.overall_score = max(
+                20, analysis.overall_score - int(penalty * 0.5)
+            )
+
     dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
     sast_summary = {
         "language": sast_res.language,
@@ -261,6 +285,14 @@ async def submit_code_for_review(
         "total_artifacts_count": intent_report.total_artifacts_count,
         "artifact_findings": [f.model_dump() for f in intent_report.artifact_findings],
     } if (intent_report.scope_drift_detected or intent_report.total_artifacts_count > 0) else None
+
+    contract_drift_summary = {
+        "has_breaking_changes": drift_res.has_breaking_changes,
+        "breaking_changes_count": drift_res.breaking_changes_count,
+        "warnings_count": drift_res.warnings_count,
+        "drift_score": drift_res.drift_score,
+        "findings": [f.model_dump() for f in drift_res.findings],
+    } if (drift_res.has_breaking_changes or drift_res.findings) else None
 
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
@@ -298,6 +330,7 @@ async def submit_code_for_review(
         sast_summary=sast_summary,
         test_audit_summary=test_audit_summary,
         intent_audit_summary=intent_audit_summary,
+        contract_drift_summary=contract_drift_summary,
         analysis=analysis.model_dump() if analysis else None,
     )
 
@@ -326,6 +359,7 @@ async def submit_code_for_review(
         "sast_summary": sast_summary,
         "test_audit_summary": test_audit_summary,
         "intent_audit_summary": intent_audit_summary,
+        "contract_drift_summary": contract_drift_summary,
         "analysis": analysis,
     }
 
@@ -352,6 +386,7 @@ async def submit_code_for_review(
         sast_summary=sast_summary,
         test_audit_summary=test_audit_summary,
         intent_audit_summary=intent_audit_summary,
+        contract_drift_summary=contract_drift_summary,
         analysis=analysis,
     )
 
@@ -452,6 +487,30 @@ async def sweep_artifacts_endpoint(
 
 
 @router.post(
+    "/detect-contract-drift",
+    response_model=ContractDriftResponse,
+    summary="Detect backward-incompatible API contract and database schema migration drifts",
+)
+async def detect_contract_drift_endpoint(
+    req: ContractDriftRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> ContractDriftResponse:
+    detector = SchemaContractDriftDetector()
+    report = detector.detect_drift(
+        code_or_diff=req.code,
+        filename=req.filename,
+        language=req.language,
+    )
+    return ContractDriftResponse(
+        has_breaking_changes=report.has_breaking_changes,
+        breaking_changes_count=report.breaking_changes_count,
+        warnings_count=report.warnings_count,
+        drift_score=report.drift_score,
+        findings=[f.model_dump() for f in report.findings],
+    )
+
+
+@router.post(
     "/detect-language",
     response_model=LanguageDetectResponse,
     summary="Automatically detect programming language from code and filename",
@@ -509,6 +568,7 @@ async def get_review_submission(
             sast_summary=doc.sast_summary,
             test_audit_summary=doc.test_audit_summary,
             intent_audit_summary=doc.intent_audit_summary,
+            contract_drift_summary=doc.contract_drift_summary,
             analysis=doc.analysis,
         )
 
@@ -545,5 +605,6 @@ async def get_review_submission(
         sast_summary=record.get("sast_summary"),
         test_audit_summary=record.get("test_audit_summary"),
         intent_audit_summary=record.get("intent_audit_summary"),
+        contract_drift_summary=record.get("contract_drift_summary"),
         analysis=record.get("analysis"),
     )

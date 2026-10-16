@@ -107,6 +107,20 @@ class IntentSweepResponse(BaseModel):
     artifact_findings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class ContractDriftRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+    language: str = Field(default="auto")
+
+
+class ContractDriftResponse(BaseModel):
+    has_breaking_changes: bool
+    breaking_changes_count: int
+    warnings_count: int
+    drift_score: float
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -154,6 +168,7 @@ class ReviewSubmissionResponse(BaseModel):
     sast_summary: Optional[Dict[str, Any]] = None
     test_audit_summary: Optional[Dict[str, Any]] = None
     intent_audit_summary: Optional[Dict[str, Any]] = None
+    contract_drift_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -178,6 +193,7 @@ class ReviewDetailResponse(BaseModel):
     sast_summary: Optional[Dict[str, Any]] = None
     test_audit_summary: Optional[Dict[str, Any]] = None
     intent_audit_summary: Optional[Dict[str, Any]] = None
+    contract_drift_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

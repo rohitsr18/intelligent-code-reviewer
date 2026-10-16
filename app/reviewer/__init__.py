@@ -42,6 +42,11 @@ from app.reviewer.intent_sweeper import (
     IntentAuditReport,
     ArtifactFinding,
 )
+from app.reviewer.schema_drift_detector import (
+    SchemaContractDriftDetector,
+    ContractDriftReport,
+    ContractDriftFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -70,6 +75,9 @@ __all__ = [
     "IntentArtifactSweeper",
     "IntentAuditReport",
     "ArtifactFinding",
+    "SchemaContractDriftDetector",
+    "ContractDriftReport",
+    "ContractDriftFinding",
     "ReviewDeterministicCache",
     "canonicalize_review_result",
     "get_review_cache",
