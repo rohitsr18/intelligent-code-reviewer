@@ -23,8 +23,11 @@ class Settings(BaseSettings):
     gcp_project_id: str = Field(default="local-dev-project", alias="GCP_PROJECT_ID")
     gcp_location: str = Field(default="us-central1", alias="GCP_LOCATION")
     gemini_model: str = Field(default="gemini-3.8-flash", alias="GEMINI_MODEL")
-    gemini_temperature: float = Field(default=0.2, alias="GEMINI_TEMPERATURE")
+    gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")
+    gemini_seed: Optional[int] = Field(default=42, alias="GEMINI_SEED")
     gemini_max_output_tokens: int = Field(default=8192, alias="GEMINI_MAX_OUTPUT_TOKENS")
+    review_cache_enabled: bool = Field(default=True, alias="REVIEW_CACHE_ENABLED")
+    review_cache_capacity: int = Field(default=512, alias="REVIEW_CACHE_CAPACITY")
 
     # BigQuery datasets & tables
     bq_dataset_id: str = Field(default="code_reviewer_analytics", alias="BQ_DATASET_ID")

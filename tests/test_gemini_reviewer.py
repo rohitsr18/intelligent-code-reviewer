@@ -223,3 +223,108 @@ async def test_gemini_review_engine_model_fallback_on_404(monkeypatch):
     assert result.overall_score == 92
     assert "[Fallback Review]" not in result.summary
 
+
+@pytest.mark.asyncio
+async def test_deterministic_review_cache_returns_identical_result(monkeypatch):
+    """Verify that identical code inputs return 100% identical findings and scores via cache."""
+    from app.reviewer.engine import ReviewDeterministicCache, GeminiReviewEngine
+
+    cache = ReviewDeterministicCache(capacity=10)
+    engine = GeminiReviewEngine()
+    engine.cache = cache
+
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = json.dumps({
+        "overall_score": 87,
+        "summary": "Deterministic code review analysis",
+        "category_scores": {"bugs": 90, "security": 85},
+        "findings": [
+            {
+                "category": "security",
+                "severity": "high",
+                "title": "Insecure Randomness",
+                "description": "Use secrets instead of random",
+                "line_start": 3,
+                "suggested_fix": "import secrets",
+            }
+        ],
+        "growth_tips": [],
+        "model_used": "gemini-3.8-flash",
+    })
+    mock_client.models.generate_content.return_value = mock_resp
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    sample_code = "import random\ndef token(): return random.randint(1, 100)"
+
+    # First analysis (cache miss)
+    result1 = await engine.analyze(code=sample_code, language="python", filename="auth.py")
+    assert mock_client.models.generate_content.call_count == 1
+
+    # Second analysis (cache hit)
+    result2 = await engine.analyze(code=sample_code, language="python", filename="auth.py")
+    # Underlying LLM generate_content must NOT be called again
+    assert mock_client.models.generate_content.call_count == 1
+
+    # Both findings and scores must be 100% identical
+    assert result1.overall_score == result2.overall_score == 87
+    assert len(result1.findings) == len(result2.findings) == 1
+    assert result1.findings[0].title == result2.findings[0].title
+    assert result1.category_scores == result2.category_scores
+
+
+def test_canonicalize_review_result_dedup_and_sorting():
+    """Verify that findings are deduplicated and canonically sorted by severity and line."""
+    from app.reviewer.engine import canonicalize_review_result
+
+    raw = ReviewAnalysisResult(
+        overall_score=75,
+        summary="Test findings",
+        findings=[
+            ReviewFinding(
+                category=FindingCategory.STYLE,
+                severity=FindingSeverity.LOW,
+                title="Naming convention",
+                description="Use snake_case",
+                line_start=15,
+            ),
+            ReviewFinding(
+                category=FindingCategory.SECURITY,
+                severity=FindingSeverity.CRITICAL,
+                title="SQL Injection",
+                description="Unsanitized input in SQL",
+                line_start=20,
+            ),
+            # Duplicate of the SQL Injection
+            ReviewFinding(
+                category=FindingCategory.SECURITY,
+                severity=FindingSeverity.CRITICAL,
+                title="SQL Injection",
+                description="Unsanitized input in SQL",
+                line_start=20,
+            ),
+            ReviewFinding(
+                category=FindingCategory.BUG,
+                severity=FindingSeverity.HIGH,
+                title="Null Dereference",
+                description="Object may be null",
+                line_start=5,
+            ),
+        ],
+        style_nits=[],
+    )
+
+    canonical = canonicalize_review_result(raw)
+
+    # 1. Duplicates stripped: 4 findings -> 3 findings
+    assert len(canonical.findings) == 3
+
+    # 2. Sorted by Severity: CRITICAL first, then HIGH, then LOW
+    assert canonical.findings[0].severity == FindingSeverity.CRITICAL
+    assert canonical.findings[0].title == "SQL Injection"
+    assert canonical.findings[1].severity == FindingSeverity.HIGH
+    assert canonical.findings[1].title == "Null Dereference"
+    assert canonical.findings[2].severity == FindingSeverity.LOW
+    assert canonical.findings[2].title == "Naming convention"
+
+
