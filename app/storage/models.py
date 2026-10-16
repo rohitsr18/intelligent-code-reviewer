@@ -38,6 +38,7 @@ class ReviewDocument(BaseModel):
     test_audit_summary: Optional[Dict[str, Any]] = None
     intent_audit_summary: Optional[Dict[str, Any]] = None
     contract_drift_summary: Optional[Dict[str, Any]] = None
+    architecture_lint_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[Dict[str, Any]] = None
     feedback: Optional[ReviewFeedback] = None
     session_id: Optional[str] = None

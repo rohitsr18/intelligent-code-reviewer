@@ -47,6 +47,11 @@ from app.reviewer.schema_drift_detector import (
     ContractDriftReport,
     ContractDriftFinding,
 )
+from app.reviewer.arch_linter import (
+    RepoArchitecturalLinter,
+    ArchLintReport,
+    ArchFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -78,6 +83,9 @@ __all__ = [
     "SchemaContractDriftDetector",
     "ContractDriftReport",
     "ContractDriftFinding",
+    "RepoArchitecturalLinter",
+    "ArchLintReport",
+    "ArchFinding",
     "ReviewDeterministicCache",
     "canonicalize_review_result",
     "get_review_cache",

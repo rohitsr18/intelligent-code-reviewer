@@ -121,6 +121,21 @@ class ContractDriftResponse(BaseModel):
     findings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class ArchLintRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+    language: str = Field(default="auto")
+
+
+class ArchLintResponse(BaseModel):
+    overall_arch_score: float
+    is_compliant: bool
+    layer_violations_count: int
+    circular_deps_count: int
+    anti_patterns_count: int
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -169,6 +184,7 @@ class ReviewSubmissionResponse(BaseModel):
     test_audit_summary: Optional[Dict[str, Any]] = None
     intent_audit_summary: Optional[Dict[str, Any]] = None
     contract_drift_summary: Optional[Dict[str, Any]] = None
+    architecture_lint_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -194,6 +210,7 @@ class ReviewDetailResponse(BaseModel):
     test_audit_summary: Optional[Dict[str, Any]] = None
     intent_audit_summary: Optional[Dict[str, Any]] = None
     contract_drift_summary: Optional[Dict[str, Any]] = None
+    architecture_lint_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

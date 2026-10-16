@@ -19,6 +19,8 @@ from app.api.v1.models import (
     IntentSweepResponse,
     ContractDriftRequest,
     ContractDriftResponse,
+    ArchLintRequest,
+    ArchLintResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -39,6 +41,7 @@ from app.reviewer.sast_scanner import SASTScanner
 from app.reviewer.test_auditor import TestHealthAuditor
 from app.reviewer.intent_sweeper import IntentArtifactSweeper
 from app.reviewer.schema_drift_detector import SchemaContractDriftDetector
+from app.reviewer.arch_linter import RepoArchitecturalLinter
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -194,6 +197,15 @@ async def submit_code_for_review(
     )
     drift_findings = drift_res.to_review_findings()
 
+    # 4.10 Repo Architectural Context & Clean Architecture Linter
+    arch_linter = RepoArchitecturalLinter()
+    arch_res = arch_linter.lint(
+        code_or_diff=submission.code,
+        filename=submission.filename,
+        language=effective_language,
+    )
+    arch_findings = arch_res.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -256,6 +268,18 @@ async def submit_code_for_review(
                 20, analysis.overall_score - int(penalty * 0.5)
             )
 
+    # Inject architectural lint findings
+    if arch_findings and analysis:
+        analysis.findings = arch_findings + analysis.findings
+        if not arch_res.is_compliant:
+            arch_penalty = (arch_res.layer_violations_count * 20) + (arch_res.circular_deps_count * 25) + (arch_res.anti_patterns_count * 15)
+            analysis.category_scores["architecture"] = max(
+                10, analysis.category_scores.get("architecture", 90) - arch_penalty
+            )
+            analysis.overall_score = max(
+                20, analysis.overall_score - int(arch_penalty * 0.5)
+            )
+
     dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
     sast_summary = {
         "language": sast_res.language,
@@ -294,6 +318,15 @@ async def submit_code_for_review(
         "findings": [f.model_dump() for f in drift_res.findings],
     } if (drift_res.has_breaking_changes or drift_res.findings) else None
 
+    architecture_lint_summary = {
+        "overall_arch_score": arch_res.overall_arch_score,
+        "is_compliant": arch_res.is_compliant,
+        "layer_violations_count": arch_res.layer_violations_count,
+        "circular_deps_count": arch_res.circular_deps_count,
+        "anti_patterns_count": arch_res.anti_patterns_count,
+        "findings": [f.model_dump() for f in arch_res.findings],
+    } if (not arch_res.is_compliant or arch_res.findings) else None
+
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
         review_id=review_id,
@@ -331,6 +364,7 @@ async def submit_code_for_review(
         test_audit_summary=test_audit_summary,
         intent_audit_summary=intent_audit_summary,
         contract_drift_summary=contract_drift_summary,
+        architecture_lint_summary=architecture_lint_summary,
         analysis=analysis.model_dump() if analysis else None,
     )
 
@@ -360,6 +394,7 @@ async def submit_code_for_review(
         "test_audit_summary": test_audit_summary,
         "intent_audit_summary": intent_audit_summary,
         "contract_drift_summary": contract_drift_summary,
+        "architecture_lint_summary": architecture_lint_summary,
         "analysis": analysis,
     }
 
@@ -387,6 +422,7 @@ async def submit_code_for_review(
         test_audit_summary=test_audit_summary,
         intent_audit_summary=intent_audit_summary,
         contract_drift_summary=contract_drift_summary,
+        architecture_lint_summary=architecture_lint_summary,
         analysis=analysis,
     )
 
@@ -511,6 +547,31 @@ async def detect_contract_drift_endpoint(
 
 
 @router.post(
+    "/lint-architecture",
+    response_model=ArchLintResponse,
+    summary="Lint code for clean architecture layer boundaries, circular imports, and anti-patterns",
+)
+async def lint_architecture_endpoint(
+    req: ArchLintRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> ArchLintResponse:
+    linter = RepoArchitecturalLinter()
+    report = linter.lint(
+        code_or_diff=req.code,
+        filename=req.filename,
+        language=req.language,
+    )
+    return ArchLintResponse(
+        overall_arch_score=report.overall_arch_score,
+        is_compliant=report.is_compliant,
+        layer_violations_count=report.layer_violations_count,
+        circular_deps_count=report.circular_deps_count,
+        anti_patterns_count=report.anti_patterns_count,
+        findings=[f.model_dump() for f in report.findings],
+    )
+
+
+@router.post(
     "/detect-language",
     response_model=LanguageDetectResponse,
     summary="Automatically detect programming language from code and filename",
@@ -569,6 +630,7 @@ async def get_review_submission(
             test_audit_summary=doc.test_audit_summary,
             intent_audit_summary=doc.intent_audit_summary,
             contract_drift_summary=doc.contract_drift_summary,
+            architecture_lint_summary=doc.architecture_lint_summary,
             analysis=doc.analysis,
         )
 
@@ -606,5 +668,6 @@ async def get_review_submission(
         test_audit_summary=record.get("test_audit_summary"),
         intent_audit_summary=record.get("intent_audit_summary"),
         contract_drift_summary=record.get("contract_drift_summary"),
+        architecture_lint_summary=record.get("architecture_lint_summary"),
         analysis=record.get("analysis"),
     )
