@@ -353,6 +353,34 @@
             </div>
           </div>
 
+          <!-- Executive Triage Panel (Key Risks & Quick Wins) -->
+          <div id="executive-triage-panel" class="hidden rounded-xl bg-surface-200/90 border border-white/10 p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-white/[0.06] pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🎯</span>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Executive Triage & Remediation</h4>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="triage-effort-badge" class="hidden px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
+              </div>
+            </div>
+            <div id="verdict-rationale-box" class="text-xs text-slate-300 leading-relaxed font-sans"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div id="key-risks-box" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs">
+                <strong class="text-rose-200 font-semibold block mb-1.5 flex items-center gap-1.5">
+                  <span>🚨</span> Top Risks
+                </strong>
+                <ul id="key-risks-list" class="space-y-1 text-slate-300 list-disc list-inside"></ul>
+              </div>
+              <div id="quick-wins-box" class="hidden p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                <strong class="text-emerald-200 font-semibold block mb-1.5 flex items-center gap-1.5">
+                  <span>⚡</span> Quick Wins (&lt; 5 mins)
+                </strong>
+                <ul id="quick-wins-list" class="space-y-1 text-slate-300 list-disc list-inside"></ul>
+              </div>
+            </div>
+          </div>
+
           <!-- Category Scores Row -->
           <div>
             <div class="flex items-center justify-between mb-2">
@@ -834,19 +862,20 @@
       const offset = 100 - score;
       strokeRing.style.strokeDashoffset = offset;
 
+      const verdict = analysis.verdict;
       const verdictPill = document.getElementById('verdict-pill');
-      if (score >= 85) {
-        strokeRing.className = 'score-circle text-emerald-400';
-        verdictPill.innerText = 'Approved / High Quality';
-        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
-      } else if (score >= 70) {
+      if (verdict === 'REQUEST_CHANGES' || (!verdict && score < 70)) {
+        strokeRing.className = 'score-circle text-rose-500';
+        verdictPill.innerText = 'Changes Requested';
+        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30';
+      } else if (verdict === 'COMMENT' || (!verdict && score < 85)) {
         strokeRing.className = 'score-circle text-amber-400';
-        verdictPill.innerText = 'Needs Attention';
+        verdictPill.innerText = 'Comment / Discuss';
         verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30';
       } else {
-        strokeRing.className = 'score-circle text-rose-500';
-        verdictPill.innerText = 'Action Required (Critical)';
-        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30';
+        strokeRing.className = 'score-circle text-emerald-400';
+        verdictPill.innerText = 'Approved / Production Ready';
+        verdictPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
       }
 
       // Meta chips
@@ -855,6 +884,53 @@
       document.getElementById('meta-engine').innerText = analysis.model_used || 'gemini-3.8-flash';
       const speedup = analysis.parallel_speedup_factor || 1.0;
       document.getElementById('meta-speedup').innerText = `${speedup}x speedup`;
+
+      // Executive Triage Panel
+      const triagePanel = document.getElementById('executive-triage-panel');
+      const rationaleBox = document.getElementById('verdict-rationale-box');
+      const effortBadge = document.getElementById('triage-effort-badge');
+      const keyRisksBox = document.getElementById('key-risks-box');
+      const keyRisksList = document.getElementById('key-risks-list');
+      const quickWinsBox = document.getElementById('quick-wins-box');
+      const quickWinsList = document.getElementById('quick-wins-list');
+
+      const hasRationale = !!analysis.verdict_rationale;
+      const hasEffort = !!analysis.effort_estimate;
+      const keyRisks = analysis.key_risks || [];
+      const quickWins = analysis.quick_wins || [];
+
+      if (hasRationale || hasEffort || keyRisks.length > 0 || quickWins.length > 0) {
+        triagePanel.classList.remove('hidden');
+        if (hasRationale) {
+          rationaleBox.innerHTML = `<strong>Verdict Rationale:</strong> ${escapeHtml(analysis.verdict_rationale)}`;
+          rationaleBox.classList.remove('hidden');
+        } else {
+          rationaleBox.classList.add('hidden');
+        }
+
+        if (hasEffort) {
+          effortBadge.innerText = `⏱️ Remediation Effort: ${analysis.effort_estimate}`;
+          effortBadge.classList.remove('hidden');
+        } else {
+          effortBadge.classList.add('hidden');
+        }
+
+        if (keyRisks.length > 0) {
+          keyRisksBox.classList.remove('hidden');
+          keyRisksList.innerHTML = keyRisks.map(r => `<li>${escapeHtml(r)}</li>`).join('');
+        } else {
+          keyRisksBox.classList.add('hidden');
+        }
+
+        if (quickWins.length > 0) {
+          quickWinsBox.classList.remove('hidden');
+          quickWinsList.innerHTML = quickWins.map(w => `<li>${escapeHtml(w)}</li>`).join('');
+        } else {
+          quickWinsBox.classList.add('hidden');
+        }
+      } else {
+        triagePanel.classList.add('hidden');
+      }
 
       // Pre-LLM DLP alert
       const dlpAlert = document.getElementById('dlp-alert-box');
@@ -947,6 +1023,18 @@
 
           const card = document.createElement('div');
           card.className = 'p-4 rounded-xl bg-surface-300/80 border border-white/[0.08] space-y-2 hover:border-white/20 transition-all';
+
+          let impactHtml = '';
+          if (f.impact) {
+            impactHtml = `
+              <div class="mt-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-start gap-2">
+                <span class="text-xs shrink-0">⚠️</span>
+                <div>
+                  <strong class="font-semibold text-rose-200">Production Impact:</strong> ${escapeHtml(f.impact)}
+                </div>
+              </div>
+            `;
+          }
           
           let fixSnippetHtml = '';
           if (f.suggested_fix) {
@@ -958,6 +1046,7 @@
                   </span>
                   <button onclick="copySnippet('fix-${idx}', this)" class="text-indigo-400 hover:text-indigo-300 font-medium">Copy</button>
                 </div>
+                ${f.fix_explanation ? `<p class="text-[11px] text-slate-300 mb-1.5 leading-relaxed font-sans">${escapeHtml(f.fix_explanation)}</p>` : ''}
                 <pre id="fix-${idx}" class="p-3 rounded-lg bg-[#05070c] border border-white/10 font-mono text-xs text-emerald-300 overflow-x-auto custom-scrollbar leading-relaxed">${escapeHtml(f.suggested_fix)}</pre>
               </div>
             `;
@@ -974,6 +1063,7 @@
               <span class="text-[11px] text-slate-400 font-mono shrink-0">${f.line_start ? 'Line ' + f.line_start : ''}</span>
             </div>
             <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(f.description)}</p>
+            ${impactHtml}
             ${fixSnippetHtml}
           `;
           findingsList.appendChild(card);

@@ -1,6 +1,7 @@
 from app.reviewer.models import (
     FindingCategory,
     FindingSeverity,
+    ReviewVerdict,
     ReviewFinding,
     GrowthTip,
     ReviewAnalysisResult,
@@ -56,6 +57,7 @@ from app.reviewer.arch_linter import (
 __all__ = [
     "FindingCategory",
     "FindingSeverity",
+    "ReviewVerdict",
     "ReviewFinding",
     "GrowthTip",
     "ReviewAnalysisResult",

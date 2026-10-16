@@ -53,7 +53,7 @@ is_gemini_35_plus = is_valid_gemini_model
 
 
 def canonicalize_review_result(result: ReviewAnalysisResult) -> ReviewAnalysisResult:
-    """Sorts, deduplicates, and deterministically normalizes findings and style nits."""
+    """Sorts, deduplicates, and deterministically normalizes findings, style nits, and executive metadata."""
     # Deduplicate findings by title, line range, category, and severity
     seen_findings = set()
     deduped_findings = []
@@ -84,6 +84,56 @@ def canonicalize_review_result(result: ReviewAnalysisResult) -> ReviewAnalysisRe
             deduped_nits.append(n)
     deduped_nits.sort(key=lambda x: (x.line_start or 0, x.title.strip().lower()))
     result.style_nits = deduped_nits
+
+    # Ensure verdict is calibrated
+    if not result.verdict:
+        if result.critical_count > 0 or result.high_count > 0:
+            result.verdict = "REQUEST_CHANGES"
+        elif len(result.findings) > 0:
+            result.verdict = "COMMENT"
+        else:
+            result.verdict = "APPROVE"
+
+    # Ensure verdict_rationale is present
+    if not result.verdict_rationale:
+        if result.verdict == "REQUEST_CHANGES":
+            result.verdict_rationale = (
+                f"Action required: {result.critical_count} critical and {result.high_count} "
+                "high-priority issues must be resolved before merging."
+            )
+        elif result.verdict == "COMMENT":
+            result.verdict_rationale = (
+                f"Code is functional with {len(result.findings)} non-blocking suggestions "
+                "for optimization and maintainability."
+            )
+        else:
+            result.verdict_rationale = "Code meets engineering quality standards and is ready for production merge."
+
+    # Ensure effort_estimate is present
+    if not result.effort_estimate:
+        if result.critical_count > 0:
+            result.effort_estimate = "1 - 2 hours"
+        elif result.high_count > 0:
+            result.effort_estimate = "30 - 45 minutes"
+        elif len(result.findings) > 0:
+            result.effort_estimate = "15 minutes"
+        else:
+            result.effort_estimate = "0 minutes"
+
+    # Ensure key_risks populated if empty
+    if not result.key_risks and result.findings:
+        result.key_risks = [
+            f.title for f in result.findings if f.severity in (FindingSeverity.CRITICAL, FindingSeverity.HIGH)
+        ][:3]
+
+    # Ensure quick_wins populated if empty
+    if not result.quick_wins:
+        candidates = [
+            f.title for f in result.findings if f.severity in (FindingSeverity.LOW, FindingSeverity.MEDIUM)
+        ]
+        if not candidates and result.growth_tips:
+            candidates = [t.topic for t in result.growth_tips]
+        result.quick_wins = candidates[:3]
 
     return result
 
@@ -186,11 +236,13 @@ class MockReviewEngine(BaseReviewEngine):
                         category=FindingCategory.SECURITY,
                         severity=FindingSeverity.CRITICAL,
                         title="Dynamic Code Execution Detected",
-                        description="Direct use of eval() or exec() can allow arbitrary code injection.",
+                        description="Direct use of eval() or exec() can allow arbitrary code injection from untrusted input.",
                         line_start=idx,
                         line_end=idx,
-                        suggested_fix="# Replace eval with a safe parser or lookup mapping",
+                        suggested_fix="# Replace eval with a safe parser or lookup mapping\nimport ast\nsafe_val = ast.literal_eval(payload)",
                         rule_id="SEC-001",
+                        impact="Allows arbitrary remote code execution within host process; potential system takeover or sensitive data exfiltration.",
+                        fix_explanation="ast.literal_eval safely parses Python literals without evaluating or executing arbitrary expressions.",
                     )
                 )
                 scores["security"] = max(20, scores["security"] - 40)
@@ -204,11 +256,13 @@ class MockReviewEngine(BaseReviewEngine):
                         category=FindingCategory.SECURITY,
                         severity=FindingSeverity.CRITICAL,
                         title="Potential SQL Injection",
-                        description="String formatting or concatenation used in SQL statement.",
+                        description="String formatting or concatenation used in SQL statement instead of parameterized queries.",
                         line_start=idx,
                         line_end=idx,
-                        suggested_fix="# Use parameterized queries with query placeholders (?)",
+                        suggested_fix="# Use parameterized queries with query placeholders (?)\ncursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))",
                         rule_id="SEC-002",
+                        impact="Direct SQL injection vulnerability allows unauthenticated attackers to read, modify, or drop backend database tables.",
+                        fix_explanation="Parameterized queries separate SQL syntax parsing from parameter data, preventing malicious SQL control tokens from executing.",
                     )
                 )
                 scores["security"] = max(30, scores["security"] - 35)
@@ -220,11 +274,13 @@ class MockReviewEngine(BaseReviewEngine):
                         category=FindingCategory.BUG,
                         severity=FindingSeverity.HIGH,
                         title="Silent Exception Swallowing",
-                        description="Catching generic Exception without logging or re-raising hides critical errors.",
+                        description="Catching generic Exception without logging or re-raising hides critical errors and causes silent corruption.",
                         line_start=idx,
                         line_end=idx,
-                        suggested_fix="except SpecificError as e:\n    logger.error('Operation failed', exc_info=e)",
+                        suggested_fix="except SpecificError as e:\n    logger.error('Operation failed', exc_info=e)\n    raise",
                         rule_id="BUG-001",
+                        impact="Masks unexpected crashes, operational outages, and bugs; creates corrupted state downstream with zero diagnostic trail.",
+                        fix_explanation="Explicitly capture the anticipated error class and log full stack trace with exc_info=True or re-raise.",
                     )
                 )
                 scores["bugs"] = max(40, scores["bugs"] - 25)
@@ -241,6 +297,8 @@ class MockReviewEngine(BaseReviewEngine):
                         line_end=idx,
                         suggested_fix="for i, item in enumerate(collection):",
                         rule_id="PERF-001",
+                        impact="Repeated indexing overhead incurs extra lookup cost and degrades maintainability.",
+                        fix_explanation="enumerate() produces index and element pairs in a single idiomatic iterator pass.",
                     )
                 )
                 scores["performance"] = max(50, scores["performance"] - 10)
@@ -266,10 +324,34 @@ class MockReviewEngine(BaseReviewEngine):
         if not findings:
             summary = "Code looks clean, well-structured, and meets engineering standards."
             overall_score = 95
+            verdict = "APPROVE"
+            verdict_rationale = "Code adheres to best practices with zero blocking issues."
+            quick_wins = []
+            key_risks = []
+            effort_estimate = "0 minutes"
         else:
             worst_score = min(scores.values())
             overall_score = max(30, int(sum(scores.values()) / len(scores)))
+            has_critical = any(f.severity == FindingSeverity.CRITICAL for f in findings)
+            has_high = any(f.severity == FindingSeverity.HIGH for f in findings)
+            if has_critical:
+                overall_score = min(overall_score, 45)
+                verdict = "REQUEST_CHANGES"
+                verdict_rationale = "Critical security or correctness issues must be resolved prior to merge."
+                effort_estimate = "1 - 2 hours"
+            elif has_high:
+                overall_score = min(overall_score, 70)
+                verdict = "REQUEST_CHANGES"
+                verdict_rationale = "High-severity bugs must be fixed before merging."
+                effort_estimate = "30 - 45 minutes"
+            else:
+                verdict = "COMMENT"
+                verdict_rationale = "Minor suggestions and performance enhancements recommended."
+                effort_estimate = "15 minutes"
+
             summary = f"Identified {len(findings)} potential areas for improvement, including security or correctness concerns."
+            key_risks = [f.title for f in findings if f.severity in (FindingSeverity.CRITICAL, FindingSeverity.HIGH)]
+            quick_wins = [f.title for f in findings if f.severity in (FindingSeverity.LOW, FindingSeverity.MEDIUM)]
 
         # Validate syntax of all suggested fixes to eliminate hallucinated/broken code
         validator = FixValidator()
@@ -280,9 +362,14 @@ class MockReviewEngine(BaseReviewEngine):
         result = ReviewAnalysisResult(
             overall_score=overall_score,
             summary=summary,
+            verdict=verdict,
+            verdict_rationale=verdict_rationale,
             category_scores=scores,
             findings=findings,
             growth_tips=growth_tips,
+            quick_wins=quick_wins,
+            key_risks=key_risks,
+            effort_estimate=effort_estimate,
             model_used="mock-engine",
             evaluation_latency_ms=round(latency_ms, 2),
         )
