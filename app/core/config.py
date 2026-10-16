@@ -1,6 +1,7 @@
+import re
 from functools import lru_cache
 from typing import List, Optional
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = "24/7 Intelligent Code Reviewer"
@@ -23,6 +25,18 @@ class Settings(BaseSettings):
     gcp_project_id: str = Field(default="local-dev-project", alias="GCP_PROJECT_ID")
     gcp_location: str = Field(default="us-central1", alias="GCP_LOCATION")
     gemini_model: str = Field(default="gemini-3.8-flash", alias="GEMINI_MODEL")
+
+    @field_validator("gemini_model")
+    @classmethod
+    def validate_gemini_model(cls, v: str) -> str:
+        if v:
+            name = v.split("/")[-1].lower().strip()
+            match = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
+            if match and float(match.group(1)) < 3.5:
+                raise ValueError(
+                    f"Model '{v}' is unsupported. Only Gemini 3.5 Flash and above models are permitted."
+                )
+        return v
     gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")
     gemini_seed: Optional[int] = Field(default=42, alias="GEMINI_SEED")
     gemini_max_output_tokens: int = Field(default=8192, alias="GEMINI_MAX_OUTPUT_TOKENS")
