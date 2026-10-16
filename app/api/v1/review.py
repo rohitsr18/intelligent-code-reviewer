@@ -11,6 +11,8 @@ from app.api.v1.models import (
     LanguageDetectResponse,
     DependencyAuditRequest,
     DependencyAuditResponse,
+    SASTScanRequest,
+    SASTScanResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -27,6 +29,7 @@ from app.reviewer.diff_pruner import DiffPruner
 from app.reviewer.batch_engine import BatchReviewEngine
 from app.reviewer.language_detector import LanguageDetector
 from app.reviewer.dependency_auditor import DependencyAuditor
+from app.reviewer.sast_scanner import SASTScanner
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -142,6 +145,15 @@ async def submit_code_for_review(
     )
     dep_findings = dep_audit_res.to_review_findings()
 
+    # 4.6 AST-based Static Application Security Testing (SAST) Scanner
+    sast_scanner = SASTScanner()
+    sast_res = sast_scanner.scan(
+        code=code_to_review,
+        language=effective_language,
+        filename=submission.filename,
+    )
+    sast_findings = sast_res.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -172,7 +184,28 @@ async def submit_code_for_review(
                 25, analysis.overall_score - (dep_audit_res.vulnerable_packages_count * 15)
             )
 
+    # Inject SAST static vulnerabilities & calibrate security score
+    if sast_findings and analysis:
+        analysis.findings = sast_findings + analysis.findings
+        sec_penalty = (sast_res.critical_count * 30) + (sast_res.high_count * 15) + (sast_res.medium_count * 5)
+        if sec_penalty > 0:
+            analysis.category_scores["security"] = max(
+                10, analysis.category_scores.get("security", 95) - sec_penalty
+            )
+            analysis.overall_score = max(
+                20, analysis.overall_score - int(sec_penalty * 0.6)
+            )
+
     dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
+    sast_summary = {
+        "language": sast_res.language,
+        "total_findings": sast_res.total_findings,
+        "critical_count": sast_res.critical_count,
+        "high_count": sast_res.high_count,
+        "medium_count": sast_res.medium_count,
+        "low_count": sast_res.low_count,
+        "findings": [f.model_dump() for f in sast_res.findings],
+    } if sast_res.total_findings > 0 else None
 
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
@@ -230,6 +263,7 @@ async def submit_code_for_review(
         "rules_applied_count": len(prompt_rules),
         "pruning_summary": pruning_summary,
         "dependency_audit": dep_summary,
+        "sast_summary": sast_summary,
         "analysis": analysis,
     }
 
@@ -253,6 +287,7 @@ async def submit_code_for_review(
         rules_applied_count=len(prompt_rules),
         pruning_summary=pruning_summary,
         dependency_audit=dep_summary,
+        sast_summary=sast_summary,
         analysis=analysis,
     )
 
@@ -275,6 +310,28 @@ async def audit_dependencies_endpoint(
         vulnerable_packages_count=res.vulnerable_packages_count,
         license_violations_count=res.license_violations_count,
         dependencies=[d.model_dump() for d in res.dependencies],
+        findings=[f.model_dump() for f in res.findings],
+    )
+
+
+@router.post(
+    "/scan-sast",
+    response_model=SASTScanResponse,
+    summary="Perform AST and static application security testing (SAST) on code",
+)
+async def scan_sast_endpoint(
+    req: SASTScanRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> SASTScanResponse:
+    scanner = SASTScanner()
+    res = scanner.scan(code=req.code, language=req.language, filename=req.filename)
+    return SASTScanResponse(
+        language=res.language,
+        total_findings=res.total_findings,
+        critical_count=res.critical_count,
+        high_count=res.high_count,
+        medium_count=res.medium_count,
+        low_count=res.low_count,
         findings=[f.model_dump() for f in res.findings],
     )
 
@@ -363,6 +420,8 @@ async def get_review_submission(
         is_safe_prompt=record["is_safe_prompt"],
         flags=record.get("flags", []),
         rules_applied_count=record.get("rules_applied_count", 0),
+        pruning_summary=record.get("pruning_summary"),
         dependency_audit=record.get("dependency_audit"),
+        sast_summary=record.get("sast_summary"),
         analysis=record.get("analysis"),
     )

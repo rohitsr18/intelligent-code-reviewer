@@ -27,6 +27,11 @@ from app.reviewer.dependency_auditor import (
     DiscoveredDependency,
     DependencyFinding,
 )
+from app.reviewer.sast_scanner import (
+    SASTScanner,
+    SASTScanResult,
+    SASTFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -46,6 +51,9 @@ __all__ = [
     "DependencyAuditResult",
     "DiscoveredDependency",
     "DependencyFinding",
+    "SASTScanner",
+    "SASTScanResult",
+    "SASTFinding",
     "ReviewDeterministicCache",
     "canonicalize_review_result",
     "get_review_cache",

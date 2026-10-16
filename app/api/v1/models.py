@@ -59,6 +59,22 @@ class DependencyAuditResponse(BaseModel):
     findings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class SASTScanRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    language: str = Field(default="auto")
+    filename: Optional[str] = None
+
+
+class SASTScanResponse(BaseModel):
+    language: str
+    total_findings: int
+    critical_count: int
+    high_count: int
+    medium_count: int
+    low_count: int
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -103,6 +119,7 @@ class ReviewSubmissionResponse(BaseModel):
     rules_applied_count: int = 0
     pruning_summary: Optional[Dict[str, Any]] = None
     dependency_audit: Optional[Dict[str, Any]] = None
+    sast_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -124,6 +141,7 @@ class ReviewDetailResponse(BaseModel):
     session_id: Optional[str] = None
     pruning_summary: Optional[Dict[str, Any]] = None
     dependency_audit: Optional[Dict[str, Any]] = None
+    sast_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
