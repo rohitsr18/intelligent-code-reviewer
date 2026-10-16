@@ -185,7 +185,10 @@
 
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label for="code-filename" class="block text-xs font-medium text-slate-300">Filename</label>
+              <label for="code-filename" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                <span>Filename</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 font-normal">Upload only</span>
+              </label>
               <button type="button" onclick="triggerLocalFilePicker()" class="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors group cursor-pointer" title="Browse and load a file from your local device">
                 <svg class="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -194,7 +197,7 @@
               </button>
             </div>
             <div class="relative flex items-center">
-              <input type="text" id="code-filename" value="auth_service.py" class="w-full bg-surface-300/90 border border-white/10 rounded-xl pl-3 pr-10 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-mono transition-all placeholder:text-slate-600" placeholder="e.g. auth.py">
+              <input type="text" id="code-filename" readonly onclick="triggerLocalFilePicker()" class="w-full bg-surface-300/70 border border-white/10 rounded-xl pl-3 pr-10 py-2 text-xs text-slate-200 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-mono transition-all placeholder:text-slate-500" placeholder="Click to upload file from device...">
               <button type="button" onclick="triggerLocalFilePicker()" class="absolute right-1.5 p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" title="Choose file from local device" aria-label="Choose local file">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -403,23 +406,42 @@
           </div>
 
           <!-- Interactive Rating / Feedback -->
-          <div class="bg-surface-300/80 border border-white/[0.08] rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div>
-              <span class="text-xs font-medium text-slate-200 block">Rate this review's accuracy:</span>
-              <span class="text-[11px] text-slate-400">Ratings train team-specific historical rules in BigQuery.</span>
+          <div class="bg-surface-300/80 border border-white/[0.08] rounded-xl p-4 flex flex-col gap-3 transition-all">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span class="text-xs font-medium text-slate-200 block">Rate this review's accuracy:</span>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <div id="star-rating" class="flex items-center space-x-1">
+                  <button type="button" onclick="setRating(1)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125 cursor-pointer" data-star="1" title="1 star - Poor">★</button>
+                  <button type="button" onclick="setRating(2)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125 cursor-pointer" data-star="2" title="2 stars - Fair">★</button>
+                  <button type="button" onclick="setRating(3)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125 cursor-pointer" data-star="3" title="3 stars - Good">★</button>
+                  <button type="button" onclick="setRating(4)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125 cursor-pointer" data-star="4" title="4 stars - Very Good">★</button>
+                  <button type="button" onclick="setRating(5)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125 cursor-pointer" data-star="5" title="5 stars - Excellent">★</button>
+                </div>
+                <span id="rating-label" class="text-xs font-semibold font-mono text-amber-300 min-w-[36px]"></span>
+              </div>
             </div>
 
-            <div class="flex items-center space-x-2">
-              <div id="star-rating" class="flex items-center space-x-1">
-                <button type="button" onclick="setRating(1)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="1">★</button>
-                <button type="button" onclick="setRating(2)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="2">★</button>
-                <button type="button" onclick="setRating(3)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="3">★</button>
-                <button type="button" onclick="setRating(4)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="4">★</button>
-                <button type="button" onclick="setRating(5)" class="star-btn text-slate-600 hover:text-amber-400 text-lg transition-transform hover:scale-125" data-star="5">★</button>
+            <!-- Feedback Comment Section (Revealed once user gives rating) -->
+            <div id="feedback-comment-container" class="hidden flex flex-col space-y-2 pt-3 border-t border-white/[0.06] transition-all">
+              <label for="feedback-comment" class="text-xs font-medium text-slate-300 flex items-center justify-between">
+                <span>Feedback Comment</span>
+                <span class="text-[10px] text-slate-500 font-normal">Optional</span>
+              </label>
+              <textarea id="feedback-comment" rows="2" class="w-full bg-surface-200/90 border border-white/10 rounded-xl p-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 font-sans resize-none custom-scrollbar leading-relaxed" placeholder="Share your feedback, report false positives, or suggest improvements..."></textarea>
+              <div class="flex items-center justify-between pt-1">
+                <span id="feedback-success-msg" class="text-[11px] text-emerald-400 hidden flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  <span>Feedback recorded successfully!</span>
+                </span>
+                <div class="ml-auto">
+                  <button id="send-feedback-btn" onclick="submitFeedback()" class="px-4 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm">
+                    Submit Feedback
+                  </button>
+                </div>
               </div>
-              <button id="send-feedback-btn" onclick="submitFeedback()" disabled class="ml-2 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600/80 hover:bg-indigo-600 text-white border border-indigo-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                Submit Feedback
-              </button>
             </div>
           </div>
 
@@ -476,6 +498,8 @@
 
     function clearEditor() {
       document.getElementById('code-input').value = '';
+      const filenameEl = document.getElementById('code-filename');
+      if (filenameEl) filenameEl.value = '';
       document.getElementById('auto-detect-badge').classList.add('hidden');
       const pill = document.getElementById('file-loaded-pill');
       if (pill) {
@@ -993,10 +1017,26 @@
         growthSection.classList.add('hidden');
       }
 
-      // Reset rating
+      // Reset rating & feedback comment state
       selectedRating = 0;
       updateStarUI();
-      document.getElementById('send-feedback-btn').disabled = true;
+      const commentContainer = document.getElementById('feedback-comment-container');
+      if (commentContainer) commentContainer.classList.add('hidden');
+      const commentBox = document.getElementById('feedback-comment');
+      if (commentBox) {
+        commentBox.value = '';
+        commentBox.disabled = false;
+      }
+      const ratingLabel = document.getElementById('rating-label');
+      if (ratingLabel) ratingLabel.innerText = '';
+      const successMsg = document.getElementById('feedback-success-msg');
+      if (successMsg) successMsg.classList.add('hidden');
+      const sendBtn = document.getElementById('send-feedback-btn');
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerText = 'Submit Feedback';
+        sendBtn.className = 'px-4 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm';
+      }
     }
 
     function toggleNits() {
@@ -1015,7 +1055,25 @@
     function setRating(rating) {
       selectedRating = rating;
       updateStarUI();
-      document.getElementById('send-feedback-btn').disabled = false;
+      
+      // Reveal comment container once rating is given
+      const commentContainer = document.getElementById('feedback-comment-container');
+      if (commentContainer) {
+        commentContainer.classList.remove('hidden');
+      }
+
+      const ratingLabel = document.getElementById('rating-label');
+      if (ratingLabel) {
+        const labels = { 1: '1/5 ★', 2: '2/5 ★★', 3: '3/5 ★★★', 4: '4/5 ★★★★', 5: '5/5 ★★★★★' };
+        ratingLabel.innerText = labels[rating] || `${rating}/5 ★`;
+      }
+
+      const btn = document.getElementById('send-feedback-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'Submit Feedback';
+        btn.className = 'px-4 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/40 transition-all shadow-sm';
+      }
     }
 
     function updateStarUI() {
@@ -1035,6 +1093,9 @@
     async function submitFeedback() {
       if (!currentReviewId || selectedRating === 0) return;
       const btn = document.getElementById('send-feedback-btn');
+      const commentBox = document.getElementById('feedback-comment');
+      const userComment = commentBox ? commentBox.value.trim() : '';
+
       btn.disabled = true;
       btn.innerText = 'Submitting...';
 
@@ -1047,19 +1108,24 @@
           },
           body: JSON.stringify({
             rating: selectedRating,
-            feedback: 'Interactive Web UI Rating',
+            feedback: userComment || `Interactive Web UI Rating (${selectedRating}/5)`,
             helpful: selectedRating >= 3
           })
         });
 
         if (res.ok) {
           btn.innerText = 'Submitted ✓';
-          btn.className = 'ml-2 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white border border-emerald-500';
+          btn.className = 'px-4 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white border border-emerald-500';
+          const successMsg = document.getElementById('feedback-success-msg');
+          if (successMsg) successMsg.classList.remove('hidden');
+          if (commentBox) commentBox.disabled = true;
         } else {
           btn.innerText = 'Error';
+          btn.disabled = false;
         }
       } catch (e) {
         btn.innerText = 'Error';
+        btn.disabled = false;
       }
     }
 
