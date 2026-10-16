@@ -89,6 +89,24 @@ class TestAuditResponse(BaseModel):
     findings: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class IntentSweepRequest(BaseModel):
+    code: str = Field(..., min_length=1)
+    context: Optional[str] = None
+    filename: Optional[str] = None
+    language: str = Field(default="auto")
+
+
+class IntentSweepResponse(BaseModel):
+    intent_alignment_score: float
+    is_aligned: bool
+    scope_drift_detected: bool
+    drift_reasons: List[str] = Field(default_factory=list)
+    unintended_files: List[str] = Field(default_factory=list)
+    missing_stated_items: List[str] = Field(default_factory=list)
+    total_artifacts_count: int
+    artifact_findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewSubmissionRequest(BaseModel):
     code: str = Field(..., min_length=1)
     language: str = Field(default="auto")
@@ -135,6 +153,7 @@ class ReviewSubmissionResponse(BaseModel):
     dependency_audit: Optional[Dict[str, Any]] = None
     sast_summary: Optional[Dict[str, Any]] = None
     test_audit_summary: Optional[Dict[str, Any]] = None
+    intent_audit_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 
@@ -158,6 +177,7 @@ class ReviewDetailResponse(BaseModel):
     dependency_audit: Optional[Dict[str, Any]] = None
     sast_summary: Optional[Dict[str, Any]] = None
     test_audit_summary: Optional[Dict[str, Any]] = None
+    intent_audit_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[ReviewAnalysisResult] = None
 
 

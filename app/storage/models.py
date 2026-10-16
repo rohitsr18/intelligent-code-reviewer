@@ -32,6 +32,11 @@ class ReviewDocument(BaseModel):
     is_safe_prompt: bool = True
     flags: List[str] = Field(default_factory=list)
     rules_applied_count: int = 0
+    pruning_summary: Optional[Dict[str, Any]] = None
+    dependency_audit: Optional[Dict[str, Any]] = None
+    sast_summary: Optional[Dict[str, Any]] = None
+    test_audit_summary: Optional[Dict[str, Any]] = None
+    intent_audit_summary: Optional[Dict[str, Any]] = None
     analysis: Optional[Dict[str, Any]] = None
     feedback: Optional[ReviewFeedback] = None
     session_id: Optional[str] = None

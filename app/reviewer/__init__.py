@@ -37,6 +37,11 @@ from app.reviewer.test_auditor import (
     TestAuditResult,
     TestHealthFinding,
 )
+from app.reviewer.intent_sweeper import (
+    IntentArtifactSweeper,
+    IntentAuditReport,
+    ArtifactFinding,
+)
 
 __all__ = [
     "FindingCategory",
@@ -62,6 +67,9 @@ __all__ = [
     "TestHealthAuditor",
     "TestAuditResult",
     "TestHealthFinding",
+    "IntentArtifactSweeper",
+    "IntentAuditReport",
+    "ArtifactFinding",
     "ReviewDeterministicCache",
     "canonicalize_review_result",
     "get_review_cache",

@@ -15,6 +15,8 @@ from app.api.v1.models import (
     SASTScanResponse,
     TestAuditRequest,
     TestAuditResponse,
+    IntentSweepRequest,
+    IntentSweepResponse,
     SUPPORTED_LANGUAGES,
 )
 from app.auth.models import AuthenticatedUser
@@ -33,6 +35,7 @@ from app.reviewer.language_detector import LanguageDetector
 from app.reviewer.dependency_auditor import DependencyAuditor
 from app.reviewer.sast_scanner import SASTScanner
 from app.reviewer.test_auditor import TestHealthAuditor
+from app.reviewer.intent_sweeper import IntentArtifactSweeper
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -169,6 +172,16 @@ async def submit_code_for_review(
         )
     test_findings = test_audit_res.to_review_findings()
 
+    # 4.8 PR Intent Verification & Leftover Artifact Sweeper
+    intent_sweeper = IntentArtifactSweeper()
+    intent_report = intent_sweeper.verify_intent(
+        code_or_diff=submission.code,
+        context=submission.context,
+        filename=submission.filename,
+        language=effective_language,
+    )
+    intent_findings = intent_report.to_review_findings()
+
     # 5. Analyze code with AI review engine enriched with team rules
     # Multi-file git diffs automatically use parallel batching & sub-2s fast-path triage
     if "diff --git a/" in guard_result.secured_prompt or "\n+++ b/" in guard_result.secured_prompt:
@@ -215,6 +228,10 @@ async def submit_code_for_review(
     if test_findings and analysis:
         analysis.findings = analysis.findings + test_findings
 
+    # Inject intent verification and artifact sweep findings
+    if intent_findings and analysis:
+        analysis.findings = analysis.findings + intent_findings
+
     dep_summary = dep_audit_res.model_dump() if dep_audit_res.is_manifest else None
     sast_summary = {
         "language": sast_res.language,
@@ -233,6 +250,17 @@ async def submit_code_for_review(
         "has_missing_coverage": test_audit_res.has_missing_coverage,
         "findings": [f.model_dump() for f in test_audit_res.findings],
     } if (test_audit_res.is_test_file or test_audit_res.findings) else None
+
+    intent_audit_summary = {
+        "intent_alignment_score": intent_report.intent_alignment_score,
+        "is_aligned": intent_report.is_aligned,
+        "scope_drift_detected": intent_report.scope_drift_detected,
+        "drift_reasons": intent_report.drift_reasons,
+        "unintended_files": intent_report.unintended_files,
+        "missing_stated_items": intent_report.missing_stated_items,
+        "total_artifacts_count": intent_report.total_artifacts_count,
+        "artifact_findings": [f.model_dump() for f in intent_report.artifact_findings],
+    } if (intent_report.scope_drift_detected or intent_report.total_artifacts_count > 0) else None
 
     # 6. Record analytical telemetry in BigQuery
     await learning_service.record_review_event(
@@ -265,6 +293,11 @@ async def submit_code_for_review(
         is_safe_prompt=guard_result.is_safe,
         flags=guard_result.flags,
         rules_applied_count=len(prompt_rules),
+        pruning_summary=pruning_summary,
+        dependency_audit=dep_summary,
+        sast_summary=sast_summary,
+        test_audit_summary=test_audit_summary,
+        intent_audit_summary=intent_audit_summary,
         analysis=analysis.model_dump() if analysis else None,
     )
 
@@ -292,6 +325,7 @@ async def submit_code_for_review(
         "dependency_audit": dep_summary,
         "sast_summary": sast_summary,
         "test_audit_summary": test_audit_summary,
+        "intent_audit_summary": intent_audit_summary,
         "analysis": analysis,
     }
 
@@ -317,6 +351,7 @@ async def submit_code_for_review(
         dependency_audit=dep_summary,
         sast_summary=sast_summary,
         test_audit_summary=test_audit_summary,
+        intent_audit_summary=intent_audit_summary,
         analysis=analysis,
     )
 
@@ -389,6 +424,34 @@ async def audit_tests_endpoint(
 
 
 @router.post(
+    "/sweep-artifacts",
+    response_model=IntentSweepResponse,
+    summary="Verify PR intent alignment and sweep for leftover debugging artifacts",
+)
+async def sweep_artifacts_endpoint(
+    req: IntentSweepRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> IntentSweepResponse:
+    sweeper = IntentArtifactSweeper()
+    report = sweeper.verify_intent(
+        code_or_diff=req.code,
+        context=req.context,
+        filename=req.filename,
+        language=req.language,
+    )
+    return IntentSweepResponse(
+        intent_alignment_score=report.intent_alignment_score,
+        is_aligned=report.is_aligned,
+        scope_drift_detected=report.scope_drift_detected,
+        drift_reasons=report.drift_reasons,
+        unintended_files=report.unintended_files,
+        missing_stated_items=report.missing_stated_items,
+        total_artifacts_count=report.total_artifacts_count,
+        artifact_findings=[f.model_dump() for f in report.artifact_findings],
+    )
+
+
+@router.post(
     "/detect-language",
     response_model=LanguageDetectResponse,
     summary="Automatically detect programming language from code and filename",
@@ -441,6 +504,11 @@ async def get_review_submission(
             rules_applied_count=doc.rules_applied_count,
             feedback=doc.feedback.model_dump() if doc.feedback else None,
             session_id=doc.session_id,
+            pruning_summary=doc.pruning_summary,
+            dependency_audit=doc.dependency_audit,
+            sast_summary=doc.sast_summary,
+            test_audit_summary=doc.test_audit_summary,
+            intent_audit_summary=doc.intent_audit_summary,
             analysis=doc.analysis,
         )
 
@@ -476,5 +544,6 @@ async def get_review_submission(
         dependency_audit=record.get("dependency_audit"),
         sast_summary=record.get("sast_summary"),
         test_audit_summary=record.get("test_audit_summary"),
+        intent_audit_summary=record.get("intent_audit_summary"),
         analysis=record.get("analysis"),
     )
