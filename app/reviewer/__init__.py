@@ -11,6 +11,11 @@ from app.reviewer.engine import (
     GeminiReviewEngine,
     MockReviewEngine,
     get_review_engine,
+    ReviewDeterministicCache,
+    canonicalize_review_result,
+    get_review_cache,
+    SUPPORTED_GEMINI_35_PLUS_MODELS,
+    is_gemini_35_plus,
 )
 
 from app.reviewer.batch_engine import BatchReviewEngine, FileDiffUnit
@@ -39,4 +44,9 @@ __all__ = [
     "DependencyAuditResult",
     "DiscoveredDependency",
     "DependencyFinding",
+    "ReviewDeterministicCache",
+    "canonicalize_review_result",
+    "get_review_cache",
+    "SUPPORTED_GEMINI_35_PLUS_MODELS",
+    "is_gemini_35_plus",
 ]

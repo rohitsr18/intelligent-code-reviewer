@@ -80,7 +80,7 @@ async def test_analytics_event_recording():
                 rule_id="SEC-002",
             )
         ],
-        model_used="gemini-1.5-pro",
+        model_used="gemini-3.8-flash",
         evaluation_latency_ms=350.5,
     )
 

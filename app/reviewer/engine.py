@@ -1,7 +1,10 @@
+import hashlib
 import json
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from typing import List, Optional
 from app.core.config import get_settings
 from app.reviewer.models import (
@@ -16,6 +19,123 @@ from app.reviewer.fix_validator import FixValidator
 from app.reviewer.noise_filter import NoiseFilter
 
 logger = logging.getLogger(__name__)
+
+SEVERITY_ORDER = {
+    FindingSeverity.CRITICAL: 0,
+    FindingSeverity.HIGH: 1,
+    FindingSeverity.MEDIUM: 2,
+    FindingSeverity.LOW: 3,
+    FindingSeverity.INFO: 4,
+}
+
+SUPPORTED_GEMINI_35_PLUS_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-3.8-pro",
+    "gemini-3.5-pro",
+]
+
+
+def is_gemini_35_plus(model_name: Optional[str]) -> bool:
+    """Check if model is Gemini 3.5 Flash or higher."""
+    if not model_name:
+        return False
+    name = model_name.split("/")[-1].lower().strip()
+    if name in SUPPORTED_GEMINI_35_PLUS_MODELS:
+        return True
+    import re
+    match = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
+    if not match:
+        return False
+    try:
+        version = float(match.group(1))
+        return version >= 3.5
+    except ValueError:
+        return False
+
+
+def canonicalize_review_result(result: ReviewAnalysisResult) -> ReviewAnalysisResult:
+    """Sorts, deduplicates, and deterministically normalizes findings and style nits."""
+    # Deduplicate findings by title, line range, category, and severity
+    seen_findings = set()
+    deduped_findings = []
+    for f in result.findings:
+        sig = (f.title.strip().lower(), f.line_start or 0, f.line_end or 0, str(f.category), str(f.severity))
+        if sig not in seen_findings:
+            seen_findings.add(sig)
+            deduped_findings.append(f)
+
+    # Sort deterministically: severity first (CRITICAL -> INFO), then line_start, then title
+    deduped_findings.sort(
+        key=lambda x: (
+            SEVERITY_ORDER.get(x.severity, 5),
+            x.line_start or 0,
+            x.line_end or 0,
+            x.title.strip().lower(),
+        )
+    )
+    result.findings = deduped_findings
+
+    # Deduplicate and sort style nits
+    seen_nits = set()
+    deduped_nits = []
+    for n in result.style_nits:
+        sig = (n.title.strip().lower(), n.line_start or 0, n.line_end or 0)
+        if sig not in seen_nits:
+            seen_nits.add(sig)
+            deduped_nits.append(n)
+    deduped_nits.sort(key=lambda x: (x.line_start or 0, x.title.strip().lower()))
+    result.style_nits = deduped_nits
+
+    return result
+
+
+class ReviewDeterministicCache:
+    """Thread-safe in-memory content-addressable cache ensuring deterministic review output."""
+
+    def __init__(self, capacity: int = 512):
+        self.capacity = capacity
+        self._cache: OrderedDict[str, ReviewAnalysisResult] = OrderedDict()
+
+    @staticmethod
+    def compute_key(
+        code: str,
+        language: str,
+        filename: Optional[str] = None,
+        context: Optional[str] = None,
+        rules: Optional[List[str]] = None,
+        min_severity: Optional[str] = "low",
+        model: Optional[str] = None,
+    ) -> str:
+        rules_repr = ",".join(sorted(rules or []))
+        canonical = f"{language}|{filename or ''}|{context or ''}|{rules_repr}|{min_severity or 'low'}|{model or ''}\n{code.strip()}"
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def get(self, key: str) -> Optional[ReviewAnalysisResult]:
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key].model_copy(deep=True)
+        return None
+
+    def put(self, key: str, value: ReviewAnalysisResult) -> None:
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        self._cache[key] = value.model_copy(deep=True)
+        if len(self._cache) > self.capacity:
+            self._cache.popitem(last=False)
+
+    def clear(self) -> None:
+        self._cache.clear()
+
+    def __len__(self) -> int:
+        return len(self._cache)
+
+
+_global_review_cache = ReviewDeterministicCache()
+
+
+def get_review_cache() -> ReviewDeterministicCache:
+    return _global_review_cache
 
 
 class BaseReviewEngine(ABC):
@@ -171,15 +291,17 @@ class MockReviewEngine(BaseReviewEngine):
 
         # Apply intelligent noise reduction and nitpick consolidation
         noise_filter = NoiseFilter()
-        return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
+        result = noise_filter.filter_and_consolidate(result, min_severity=min_severity)
+        return canonicalize_review_result(result)
 
 
 class GeminiReviewEngine(BaseReviewEngine):
-    """Production Vertex AI / Gemini review engine."""
+    """Production Vertex AI / Gemini review engine with deterministic caching and output canonicalization."""
 
     def __init__(self) -> None:
         self.settings = get_settings()
         self._client = None
+        self.cache = _global_review_cache
 
     def _get_client(self):
         if self._client is None:
@@ -212,22 +334,49 @@ class GeminiReviewEngine(BaseReviewEngine):
         rules: Optional[List[str]] = None,
         min_severity: Optional[str] = "low",
     ) -> ReviewAnalysisResult:
+        # Deterministic cache check: guarantees identical code gets identical findings & scores
+        cache_key = None
+        if self.settings.review_cache_enabled:
+            cache_key = self.cache.compute_key(
+                code=code,
+                language=language,
+                filename=filename,
+                context=context,
+                rules=rules,
+                min_severity=min_severity,
+                model=self.settings.gemini_model,
+            )
+            cached_res = self.cache.get(cache_key)
+            if cached_res is not None:
+                logger.info(f"Serving deterministic cached review for key {cache_key[:12]}")
+                return cached_res
+
         client = self._get_client()
         if client is None:
             # Fall back to mock analyzer when credentials are unavailable
             fallback = MockReviewEngine()
-            return await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
+            fallback_res = await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
+            if self.settings.review_cache_enabled and cache_key:
+                self.cache.put(cache_key, fallback_res)
+            return fallback_res
 
         prompt = build_review_prompt(code, language, filename, context, rules)
         start_time = time.time()
 
         from google.genai import types
 
-        # Build prioritized list of models to try
+        # Build prioritized list of models to try - strictly Gemini 3.5 Flash and above
         primary_model = self.settings.gemini_model or "gemini-3.8-flash"
+        if not is_gemini_35_plus(primary_model):
+            logger.warning(
+                "Configured model '%s' is below Gemini 3.5. Defaulting to gemini-3.8-flash.",
+                primary_model,
+            )
+            primary_model = "gemini-3.8-flash"
+
         candidate_models = [primary_model]
-        for fallback_model in ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
-            if fallback_model not in candidate_models:
+        for fallback_model in SUPPORTED_GEMINI_35_PLUS_MODELS:
+            if fallback_model not in candidate_models and is_gemini_35_plus(fallback_model):
                 candidate_models.append(fallback_model)
 
         last_exception = None
@@ -238,16 +387,20 @@ class GeminiReviewEngine(BaseReviewEngine):
 
             for attempt in range(max_retries):
                 try:
+                    config_kwargs = {
+                        "system_instruction": SYSTEM_INSTRUCTION,
+                        "response_mime_type": "application/json",
+                        "response_schema": ReviewAnalysisResult,
+                        "temperature": self.settings.gemini_temperature,
+                        "max_output_tokens": self.settings.gemini_max_output_tokens,
+                    }
+                    if self.settings.gemini_seed is not None:
+                        config_kwargs["seed"] = self.settings.gemini_seed
+
                     response = client.models.generate_content(
                         model=model_to_try,
                         contents=prompt,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_INSTRUCTION,
-                            response_mime_type="application/json",
-                            response_schema=ReviewAnalysisResult,
-                            temperature=self.settings.gemini_temperature,
-                            max_output_tokens=self.settings.gemini_max_output_tokens,
-                        ),
+                        config=types.GenerateContentConfig(**config_kwargs),
                     )
                     latency_ms = (time.time() - start_time) * 1000
                     result = ReviewAnalysisResult.model_validate_json(response.text)
@@ -260,7 +413,16 @@ class GeminiReviewEngine(BaseReviewEngine):
 
                     # Apply intelligent noise reduction and nitpick consolidation
                     noise_filter = NoiseFilter()
-                    return noise_filter.filter_and_consolidate(result, min_severity=min_severity)
+                    result = noise_filter.filter_and_consolidate(result, min_severity=min_severity)
+
+                    # Canonicalize finding order and remove any duplicate reports
+                    result = canonicalize_review_result(result)
+
+                    # Cache deterministic output for future identical requests
+                    if self.settings.review_cache_enabled and cache_key:
+                        self.cache.put(cache_key, result)
+
+                    return result
 
                 except Exception as e:
                     last_exception = e
@@ -273,7 +435,10 @@ class GeminiReviewEngine(BaseReviewEngine):
                     if "credentials were not found" in err_msg or "default credentials" in err_msg:
                         logger.info("ADC credentials not configured; falling back immediately to local review engine.")
                         fallback = MockReviewEngine()
-                        return await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
+                        fallback_res = await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
+                        if self.settings.review_cache_enabled and cache_key:
+                            self.cache.put(cache_key, fallback_res)
+                        return fallback_res
 
                     logger.warning(f"Gemini API attempt {attempt + 1} with {model_to_try} failed: {e}")
                     if attempt < max_retries - 1:
@@ -288,6 +453,9 @@ class GeminiReviewEngine(BaseReviewEngine):
         fallback = MockReviewEngine()
         res = await fallback.analyze(code, language, filename, context, rules, min_severity=min_severity)
         res.summary = f"[Fallback Review] Upstream model error: {str(last_exception)}. Heuristic review generated."
+        res = canonicalize_review_result(res)
+        if self.settings.review_cache_enabled and cache_key:
+            self.cache.put(cache_key, res)
         return res
 
 

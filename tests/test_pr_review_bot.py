@@ -38,7 +38,7 @@ def test_format_markdown_pr_comment_clean():
             "growth_tips": [
                 {"topic": "Type Safety", "advice": "Use explicit return types.", "learning_resource": "https://example.com"}
             ],
-            "model_used": "gemini-1.5-flash",
+            "model_used": "gemini-3.8-flash",
         },
     }
     comment = format_markdown_pr_comment(clean_data)
@@ -65,7 +65,7 @@ def test_format_markdown_pr_comment_with_critical_issues():
                 }
             ],
             "growth_tips": [],
-            "model_used": "gemini-1.5-flash",
+            "model_used": "gemini-3.8-flash",
         },
     }
     comment = format_markdown_pr_comment(critical_data)

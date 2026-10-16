@@ -9,7 +9,12 @@ from app.reviewer.models import (
     ReviewAnalysisResult,
 )
 from app.reviewer.prompts import build_review_prompt, SYSTEM_INSTRUCTION
-from app.reviewer.engine import MockReviewEngine, GeminiReviewEngine
+from app.reviewer.engine import (
+    MockReviewEngine,
+    GeminiReviewEngine,
+    is_gemini_35_plus,
+    SUPPORTED_GEMINI_35_PLUS_MODELS,
+)
 
 
 def test_build_review_prompt():
@@ -54,7 +59,7 @@ def test_review_analysis_model_metrics():
                 advice="Add unit tests using pytest fixtures",
             )
         ],
-        model_used="gemini-1.5-pro",
+        model_used="gemini-3.8-flash",
     )
     assert result.total_findings == 2
     assert result.critical_count == 1
@@ -220,6 +225,198 @@ async def test_gemini_review_engine_model_fallback_on_404(monkeypatch):
 
     assert "gemini-3.8-flash" in calls
     assert len(calls) >= 2  # Tried primary, then tried fallback model
+    assert calls[0] == "gemini-3.8-flash"
+    assert calls[1] == "gemini-3.5-flash"
+    for m in calls:
+        assert is_gemini_35_plus(m) is True
+    assert "gemini-1.5-flash" not in calls
+    assert "gemini-2.0-flash" not in calls
+    assert "gemini-2.5-flash" not in calls
     assert result.overall_score == 92
     assert "[Fallback Review]" not in result.summary
+
+
+@pytest.mark.asyncio
+async def test_deterministic_review_cache_returns_identical_result(monkeypatch):
+    """Verify that identical code inputs return 100% identical findings and scores via cache."""
+    from app.reviewer.engine import ReviewDeterministicCache, GeminiReviewEngine
+
+    cache = ReviewDeterministicCache(capacity=10)
+    engine = GeminiReviewEngine()
+    engine.cache = cache
+
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = json.dumps({
+        "overall_score": 87,
+        "summary": "Deterministic code review analysis",
+        "category_scores": {"bugs": 90, "security": 85},
+        "findings": [
+            {
+                "category": "security",
+                "severity": "high",
+                "title": "Insecure Randomness",
+                "description": "Use secrets instead of random",
+                "line_start": 3,
+                "suggested_fix": "import secrets",
+            }
+        ],
+        "growth_tips": [],
+        "model_used": "gemini-3.8-flash",
+    })
+    mock_client.models.generate_content.return_value = mock_resp
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    sample_code = "import random\ndef token(): return random.randint(1, 100)"
+
+    # First analysis (cache miss)
+    result1 = await engine.analyze(code=sample_code, language="python", filename="auth.py")
+    assert mock_client.models.generate_content.call_count == 1
+
+    # Second analysis (cache hit)
+    result2 = await engine.analyze(code=sample_code, language="python", filename="auth.py")
+    # Underlying LLM generate_content must NOT be called again
+    assert mock_client.models.generate_content.call_count == 1
+
+    # Both findings and scores must be 100% identical
+    assert result1.overall_score == result2.overall_score == 87
+    assert len(result1.findings) == len(result2.findings) == 1
+    assert result1.findings[0].title == result2.findings[0].title
+    assert result1.category_scores == result2.category_scores
+
+
+def test_canonicalize_review_result_dedup_and_sorting():
+    """Verify that findings are deduplicated and canonically sorted by severity and line."""
+    from app.reviewer.engine import canonicalize_review_result
+
+    raw = ReviewAnalysisResult(
+        overall_score=75,
+        summary="Test findings",
+        findings=[
+            ReviewFinding(
+                category=FindingCategory.STYLE,
+                severity=FindingSeverity.LOW,
+                title="Naming convention",
+                description="Use snake_case",
+                line_start=15,
+            ),
+            ReviewFinding(
+                category=FindingCategory.SECURITY,
+                severity=FindingSeverity.CRITICAL,
+                title="SQL Injection",
+                description="Unsanitized input in SQL",
+                line_start=20,
+            ),
+            # Duplicate of the SQL Injection
+            ReviewFinding(
+                category=FindingCategory.SECURITY,
+                severity=FindingSeverity.CRITICAL,
+                title="SQL Injection",
+                description="Unsanitized input in SQL",
+                line_start=20,
+            ),
+            ReviewFinding(
+                category=FindingCategory.BUG,
+                severity=FindingSeverity.HIGH,
+                title="Null Dereference",
+                description="Object may be null",
+                line_start=5,
+            ),
+        ],
+        style_nits=[],
+    )
+
+    canonical = canonicalize_review_result(raw)
+
+    # 1. Duplicates stripped: 4 findings -> 3 findings
+    assert len(canonical.findings) == 3
+
+    # 2. Sorted by Severity: CRITICAL first, then HIGH, then LOW
+    assert canonical.findings[0].severity == FindingSeverity.CRITICAL
+    assert canonical.findings[0].title == "SQL Injection"
+    assert canonical.findings[1].severity == FindingSeverity.HIGH
+    assert canonical.findings[1].title == "Null Dereference"
+    assert canonical.findings[2].severity == FindingSeverity.LOW
+    assert canonical.findings[2].title == "Naming convention"
+
+
+def test_gemini_35_plus_model_filter():
+    """Verify is_gemini_35_plus identifies only 3.5+ models."""
+    from app.reviewer.engine import is_gemini_35_plus
+
+    # Supported >= 3.5 models
+    assert is_gemini_35_plus("gemini-3.8-flash") is True
+    assert is_gemini_35_plus("gemini-3.5-flash") is True
+    assert is_gemini_35_plus("gemini-3.5-pro") is True
+    assert is_gemini_35_plus("gemini-3.8-pro") is True
+    assert is_gemini_35_plus("publishers/google/models/gemini-3.8-flash") is True
+    assert is_gemini_35_plus("gemini-4.0-flash") is True
+
+    # Legacy models < 3.5 must be rejected
+    assert is_gemini_35_plus("gemini-2.5-flash") is False
+    assert is_gemini_35_plus("gemini-2.0-flash") is False
+    assert is_gemini_35_plus("gemini-1.5-flash") is False
+    assert is_gemini_35_plus("gemini-1.5-pro") is False
+    assert is_gemini_35_plus("gemini-1.0-pro") is False
+    assert is_gemini_35_plus(None) is False
+    assert is_gemini_35_plus("") is False
+    assert is_gemini_35_plus("claude-3-opus") is False
+
+
+def test_gemini_config_rejects_sub_35_models():
+    """Verify Settings rejects any configured model lower than Gemini 3.5."""
+    from app.core.config import Settings
+
+    # Allowed models
+    s1 = Settings(gemini_model="gemini-3.8-flash")
+    assert s1.gemini_model == "gemini-3.8-flash"
+    s2 = Settings(gemini_model="gemini-3.5-flash")
+    assert s2.gemini_model == "gemini-3.5-flash"
+
+    # Disallowed models must raise ValidationError
+    with pytest.raises(Exception) as exc_info:
+        Settings(gemini_model="gemini-1.5-flash")
+    assert "Only Gemini 3.5 Flash and above models are permitted" in str(exc_info.value)
+
+    with pytest.raises(Exception) as exc_info:
+        Settings(gemini_model="gemini-2.0-flash")
+    assert "Only Gemini 3.5 Flash and above models are permitted" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_gemini_engine_upgrades_sub_35_models_safely(monkeypatch):
+    """Verify GeminiReviewEngine ignores any forced sub-3.5 model and defaults to gemini-3.8-flash."""
+    from app.reviewer.engine import GeminiReviewEngine
+
+    engine = GeminiReviewEngine()
+    engine.settings.gemini_api_key = "dummy-key"
+    # Force a legacy model on settings bypassing pydantic validation
+    object.__setattr__(engine.settings, "gemini_model", "gemini-1.5-flash")
+
+    mock_client = MagicMock()
+    called_models = []
+
+    def mock_generate_content(model, contents, config):
+        called_models.append(model)
+        mock_resp = MagicMock()
+        mock_resp.text = json.dumps({
+            "overall_score": 90,
+            "summary": "OK",
+            "category_scores": {"bugs": 90},
+            "findings": [],
+            "growth_tips": [],
+            "model_used": model,
+        })
+        return mock_resp
+
+    mock_client.models.generate_content.side_effect = mock_generate_content
+    monkeypatch.setattr(engine, "_get_client", lambda: mock_client)
+
+    result = await engine.analyze(code="print('test')", language="python")
+
+    assert "gemini-1.5-flash" not in called_models
+    assert called_models[0] == "gemini-3.8-flash"
+    assert result.model_used == "gemini-3.8-flash"
+
+
 
