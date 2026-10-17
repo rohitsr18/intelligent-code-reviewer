@@ -45,7 +45,7 @@ class Settings(BaseSettings):
         return v
     gemini_temperature: float = Field(default=0.0, alias="GEMINI_TEMPERATURE")
     gemini_seed: Optional[int] = Field(default=42, alias="GEMINI_SEED")
-    gemini_max_output_tokens: int = Field(default=8192, alias="GEMINI_MAX_OUTPUT_TOKENS")
+    gemini_max_output_tokens: int = Field(default=16384, alias="GEMINI_MAX_OUTPUT_TOKENS")
     gemini_thinking_budget: Optional[int] = Field(
         default=0,
         alias="GEMINI_THINKING_BUDGET",
