@@ -52,6 +52,113 @@ SUPPORTED_GEMINI_35_PLUS_MODELS = VALID_STABLE_GEMINI_MODELS
 is_gemini_35_plus = is_valid_gemini_model
 
 
+def repair_truncated_json(raw: str) -> str:
+    """Repairs partially truncated JSON strings resulting from LLM max_output_tokens limits.
+
+    Ensures that if generation was cut off mid-string or mid-object, open strings and
+    matching delimiters ('{', '[') are properly closed in LIFO order so that Pydantic
+    can successfully deserialize valid completed findings.
+    """
+    if not raw or not isinstance(raw, str):
+        return raw
+
+    cleaned = raw.strip()
+
+    # Strip markdown code fences if wrapped in ```json ... ```
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:].strip()
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:].strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3].strip()
+
+    # Fast path: already valid JSON
+    try:
+        json.loads(cleaned)
+        return cleaned
+    except Exception:
+        pass
+
+    # Step 1: Detect if cut off inside a string literal
+    in_string = False
+    escape = False
+    for ch in cleaned:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+
+    repaired = cleaned
+    if in_string:
+        repaired += '"'
+
+    # Step 2: Remove trailing incomplete property keys or colons/commas before closing brackets
+    while True:
+        trimmed = repaired.rstrip()
+        if trimmed.endswith(","):
+            repaired = trimmed[:-1]
+        elif trimmed.endswith(":"):
+            repaired = trimmed[:-1].rstrip()
+            if repaired.endswith('"'):
+                idx = repaired.rfind('"', 0, -1)
+                if idx != -1:
+                    repaired = repaired[:idx].rstrip()
+                    if repaired.endswith(","):
+                        repaired = repaired[:-1]
+        else:
+            break
+
+    # Step 3: Track open brackets on the adjusted string
+    in_string = False
+    escape = False
+    stack = []
+    for ch in repaired:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch in ("{", "["):
+                stack.append(ch)
+            elif ch == "}":
+                if stack and stack[-1] == "{":
+                    stack.pop()
+            elif ch == "]":
+                if stack and stack[-1] == "[":
+                    stack.pop()
+
+    # Step 4: Close all remaining open brackets in reverse LIFO order
+    while stack:
+        opener = stack.pop()
+        repaired = repaired.rstrip()
+        if repaired.endswith(","):
+            repaired = repaired[:-1]
+        if opener == "{":
+            repaired += "}"
+        elif opener == "[":
+            repaired += "]"
+
+    # Test if valid JSON
+    try:
+        json.loads(repaired)
+        logger.info("Successfully repaired truncated LLM JSON response.")
+        return repaired
+    except Exception as e:
+        logger.warning("Could not automatically repair truncated JSON: %s", e)
+        return cleaned
+
+
 def canonicalize_review_result(result: ReviewAnalysisResult) -> ReviewAnalysisResult:
     """Sorts, deduplicates, and deterministically normalizes findings, style nits, and executive metadata."""
     # Deduplicate findings by title, line range, category, and severity
@@ -507,12 +614,16 @@ class GeminiReviewEngine(BaseReviewEngine):
 
             for attempt in range(max_retries):
                 try:
+                    # Expand output token limit to prevent mid-JSON cutoff
+                    base_max_tokens = max(self.settings.gemini_max_output_tokens, 8192)
+                    current_max_tokens = min(base_max_tokens * (attempt + 1), 16384)
+
                     config_kwargs = {
                         "system_instruction": SYSTEM_INSTRUCTION,
                         "response_mime_type": "application/json",
                         "response_schema": ReviewAnalysisResult,
                         "temperature": self.settings.gemini_temperature,
-                        "max_output_tokens": min(self.settings.gemini_max_output_tokens, 4096),
+                        "max_output_tokens": current_max_tokens,
                     }
                     if self.settings.gemini_seed is not None:
                         config_kwargs["seed"] = self.settings.gemini_seed
@@ -526,14 +637,22 @@ class GeminiReviewEngine(BaseReviewEngine):
                         except Exception as tc_err:
                             logger.debug("Could not initialize ThinkingConfig: %s", tc_err)
 
+                    current_prompt = prompt
+                    if attempt > 0:
+                        current_prompt += "\n\nImportant: Keep your JSON response strictly valid and concise. Limit suggested_fix snippets to essential lines."
+
                     response = await self._generate_content_async(
                         client=client,
                         model=model_to_try,
-                        contents=prompt,
+                        contents=current_prompt,
                         config=types.GenerateContentConfig(**config_kwargs),
                     )
                     latency_ms = (time.time() - start_time) * 1000
-                    result = ReviewAnalysisResult.model_validate_json(response.text)
+
+                    # Parse with robust repair in case model generation was truncated at EOF
+                    raw_text = response.text or ""
+                    repaired_text = repair_truncated_json(raw_text)
+                    result = ReviewAnalysisResult.model_validate_json(repaired_text)
                     result.evaluation_latency_ms = round(latency_ms, 2)
                     result.model_used = model_to_try
 
@@ -583,12 +702,22 @@ class GeminiReviewEngine(BaseReviewEngine):
                             self.cache.put(cache_key, fallback_res)
                         return fallback_res
 
+                    if "json" in err_msg or "eof" in err_msg or "validation error" in err_msg:
+                        logger.warning(
+                            f"Attempt {attempt + 1} with {model_to_try} produced invalid or truncated JSON. "
+                            f"Retrying with expanded token budget..."
+                        )
+
                     logger.warning(f"Gemini API attempt {attempt + 1} with {model_to_try} failed: {e}")
                     if attempt < max_retries - 1:
                         await asyncio.sleep(0.5)
 
             if not model_not_found and last_exception:
-                # If the error was not a 404 (e.g. rate limit or bad request), don't cycle through other models
+                err_str = str(last_exception).lower()
+                # If error was JSON truncation, don't abort all models; allow fallback to next candidate model
+                if "json" in err_str or "eof" in err_str or "validation error" in err_str:
+                    logger.warning(f"Model {model_to_try} failed with JSON truncation. Trying fallback model...")
+                    continue
                 break
 
         logger.error(f"Gemini analysis failed: {last_exception}")
