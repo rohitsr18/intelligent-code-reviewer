@@ -1,0 +1,264 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080b12" />
+      <stop offset="50%" stop-color="#0e1320" />
+      <stop offset="100%" stop-color="#07090e" />
+    </linearGradient>
+
+    <linearGradient id="gcpGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4285F4" />
+      <stop offset="35%" stop-color="#34A853" />
+      <stop offset="70%" stop-color="#FBBC05" />
+      <stop offset="100%" stop-color="#EA4335" />
+    </linearGradient>
+
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#141926" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0e131d" stop-opacity="0.95" />
+    </linearGradient>
+
+    <linearGradient id="cloudRunGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4" stop-opacity="0.15" />
+      <stop offset="50%" stop-color="#6366F1" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#0e1320" stop-opacity="0.2" />
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+
+    <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Arrow Marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#818CF8" />
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#34A853" />
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#4285F4" />
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; font-size: 24px; font-weight: 800; fill: #FFFFFF; }
+    .subtitle { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 500; fill: #94A3B8; }
+    .section-title { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; fill: #818CF8; }
+    .box-title { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; fill: #F1F5F9; }
+    .box-desc { font-family: system-ui, sans-serif; font-size: 11px; fill: #94A3B8; line-height: 1.4; }
+    .badge { font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; }
+    .wire { stroke: #4F46E5; stroke-width: 2; fill: none; stroke-dasharray: 4,4; }
+  </style>
+
+  <!-- Canvas Background -->
+  <rect width="1200" height="820" fill="url(#bgGradient)" rx="16" />
+  <rect x="2" y="2" width="1196" height="816" fill="none" stroke="rgba(255,255,255,0.08)" rx="14" />
+
+  <!-- Header Banner -->
+  <g transform="translate(60, 40)">
+    <!-- GCP Accent Bar -->
+    <rect x="0" y="0" width="8" height="42" fill="url(#gcpGradient)" rx="4" />
+    <text x="24" y="22" class="title">Code Sarathi | System Architecture</text>
+    <text x="24" y="38" class="subtitle">Autonomous Zero-Trust 24/7 AI Code Reviewer &amp; Developer Growth Platform on Google Cloud</text>
+    
+    <!-- Right side badges -->
+    <rect x="850" y="8" width="130" height="26" rx="13" fill="rgba(66, 133, 244, 0.15)" stroke="rgba(66, 133, 244, 0.3)" />
+    <text x="915" y="25" text-anchor="middle" class="badge" fill="#60A5FA">Google Cloud Native</text>
+    <rect x="990" y="8" width="90" height="26" rx="13" fill="rgba(52, 211, 153, 0.15)" stroke="rgba(52, 211, 153, 0.3)" />
+    <text x="1035" y="25" text-anchor="middle" class="badge" fill="#34D399">Zero-Trust DLP</text>
+  </g>
+
+  <!-- ==================== 1. CLIENT & INGESTION LAYER ==================== -->
+  <g transform="translate(60, 110)">
+    <text x="0" y="0" class="section-title">1. Client &amp; Ingestion Layer</text>
+    
+    <!-- Card 1: Web Workbench -->
+    <g transform="translate(0, 15)" filter="url(#shadow)">
+      <rect width="330" height="80" rx="12" fill="url(#cardBg)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2" />
+      <circle cx="35" cy="40" r="18" fill="rgba(99,102,241,0.15)" />
+      <text x="35" y="45" font-size="16" text-anchor="middle">💻</text>
+      <text x="68" y="34" class="box-title">Modern Web Workbench</text>
+      <text x="68" y="52" class="box-desc">Tailwind Glassmorphic UI with Radial Score Dial,</text>
+      <text x="68" y="66" class="box-desc">AST fix copy, and local file drag-and-drop</text>
+    </g>
+
+    <!-- Card 2: Git / CI-CD -->
+    <g transform="translate(370, 15)" filter="url(#shadow)">
+      <rect width="330" height="80" rx="12" fill="url(#cardBg)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2" />
+      <circle cx="35" cy="40" r="18" fill="rgba(52,211,153,0.15)" />
+      <text x="35" y="45" font-size="16" text-anchor="middle">🐙</text>
+      <text x="68" y="34" class="box-title">GitHub / GitLab CI/CD</text>
+      <text x="68" y="52" class="box-desc">Automated PR webhooks, Git diff review</text>
+      <text x="68" y="66" class="box-desc">triggers, and inline comment posting</text>
+    </g>
+
+    <!-- Card 3: REST API Gateway -->
+    <g transform="translate(740, 15)" filter="url(#shadow)">
+      <rect width="340" height="80" rx="12" fill="url(#cardBg)" stroke="rgba(255,255,255,0.12)" stroke-width="1.2" />
+      <circle cx="35" cy="40" r="18" fill="rgba(251,188,5,0.15)" />
+      <text x="35" y="45" font-size="16" text-anchor="middle">⚡</text>
+      <text x="68" y="34" class="box-title">REST API &amp; SDK Client</text>
+      <text x="68" y="52" class="box-desc">Endpoints: /review/submit, /detect-language,</text>
+      <text x="68" y="66" class="box-desc">/audit-dependencies, /lint-architecture</text>
+    </g>
+  </g>
+
+  <!-- Flow Arrows Down to IAP -->
+  <path d="M 225 205 L 225 235 L 590 235 L 590 248" stroke="#6366F1" stroke-width="1.8" fill="none" marker-end="url(#arrow)" />
+  <path d="M 535 205 L 535 248" stroke="#6366F1" stroke-width="1.8" fill="none" marker-end="url(#arrow)" />
+  <path d="M 910 205 L 910 235 L 610 235 L 610 248" stroke="#6366F1" stroke-width="1.8" fill="none" marker-end="url(#arrow)" />
+
+  <!-- ==================== 2. ZERO-TRUST GATEWAY (IAP) ==================== -->
+  <g transform="translate(60, 250)" filter="url(#shadow)">
+    <rect width="1080" height="50" rx="10" fill="#111625" stroke="rgba(66, 133, 244, 0.4)" stroke-width="1.5" />
+    <circle cx="35" cy="25" r="14" fill="rgba(66, 133, 244, 0.2)" />
+    <text x="35" y="30" font-size="14" text-anchor="middle">🛡️</text>
+    <text x="60" y="30" class="box-title" font-size="14">Google Cloud Identity-Aware Proxy (IAP)</text>
+    <text x="375" y="30" font-size="12" fill="#94A3B8">• Cryptographic JWT Token Verification</text>
+    <text x="650" y="30" font-size="12" fill="#94A3B8">• Role-Based Access Control (RBAC: Engineer / Tech Lead / Admin)</text>
+    <rect x="970" y="14" width="95" height="22" rx="11" fill="rgba(52, 211, 153, 0.15)" stroke="rgba(52, 211, 153, 0.3)" />
+    <text x="1017" y="28" text-anchor="middle" class="badge" fill="#34D399">Zero-Trust</text>
+  </g>
+
+  <!-- Flow Arrow from IAP to Cloud Run -->
+  <path d="M 600 300 L 600 325" stroke="#4285F4" stroke-width="2" fill="none" marker-end="url(#arrowBlue)" />
+
+  <!-- ==================== 3. COMPUTE LAYER: GOOGLE CLOUD RUN ==================== -->
+  <g transform="translate(60, 330)">
+    <!-- Main Cloud Run Outer Box -->
+    <rect width="1080" height="295" rx="16" fill="url(#cloudRunGlow)" stroke="#4285F4" stroke-width="1.8" filter="url(#shadow)" />
+    
+    <!-- Cloud Run Header Badge -->
+    <g transform="translate(20, 16)">
+      <rect width="250" height="28" rx="14" fill="#1E293B" stroke="rgba(66, 133, 244, 0.5)" />
+      <text x="16" y="18" font-size="14">☁️</text>
+      <text x="38" y="18" font-family="system-ui" font-size="13" font-weight="700" fill="#60A5FA">Google Cloud Run</text>
+      <text x="162" y="18" font-family="system-ui" font-size="11" fill="#94A3B8">(FastAPI Backend)</text>
+    </g>
+    <text x="830" y="34" font-family="system-ui" font-size="11" fill="#94A3B8">Auto-scales 0 to N | Dockerized Linux Microservice</text>
+
+    <!-- Sub-Block 1: Pre-LLM Guardrails -->
+    <g transform="translate(20, 56)">
+      <rect width="245" height="220" rx="10" fill="#101522" stroke="rgba(244, 63, 94, 0.3)" stroke-width="1.2" />
+      <rect x="0" y="0" width="245" height="32" rx="10" fill="rgba(244, 63, 94, 0.12)" />
+      <text x="14" y="21" font-family="system-ui" font-size="12" font-weight="700" fill="#FDA4AF">🛡️ Pre-LLM Guardrails</text>
+      
+      <g transform="translate(14, 48)">
+        <text x="0" y="12" class="box-title" font-size="12">1. Data Leak Prevention (DLP)</text>
+        <text x="0" y="26" class="box-desc">Masks 15+ secrets (AWS/GCP/keys)</text>
+
+        <text x="0" y="52" class="box-title" font-size="12">2. Prompt Injection Defense</text>
+        <text x="0" y="66" class="box-desc">Sanitizes jailbreaks &amp; override tokens</text>
+
+        <text x="0" y="92" class="box-title" font-size="12">3. Static SAST Security Scanner</text>
+        <text x="0" y="106" class="box-desc">Flags shell injection, pickle, md5</text>
+
+        <text x="0" y="132" class="box-title" font-size="12">4. Dependency CVE Auditor</text>
+        <text x="0" y="146" class="box-desc">Audits packages &amp; copyleft licenses</text>
+      </g>
+    </g>
+
+    <!-- Sub-Block 2: Performance & Token Optimizer -->
+    <g transform="translate(280, 56)">
+      <rect width="245" height="220" rx="10" fill="#101522" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1.2" />
+      <rect x="0" y="0" width="245" height="32" rx="10" fill="rgba(99, 102, 241, 0.12)" />
+      <text x="14" y="21" font-family="system-ui" font-size="12" font-weight="700" fill="#A5B4FC">⚡ Concurrency &amp; Cache</text>
+      
+      <g transform="translate(14, 48)">
+        <text x="0" y="12" class="box-title" font-size="12">1. Multi-File Parallel Diff</text>
+        <text x="0" y="26" class="box-desc">Async batching with adaptive throttle</text>
+
+        <text x="0" y="52" class="box-title" font-size="12">2. Token Cost Diff Pruner</text>
+        <text x="0" y="66" class="box-desc">Strips lockfiles, saving 90% tokens</text>
+
+        <text x="0" y="92" class="box-title" font-size="12">3. Deterministic SHA-256 Cache</text>
+        <text x="0" y="106" class="box-desc">Sub-10ms response for identical diffs</text>
+
+        <text x="0" y="132" class="box-title" font-size="12">4. Auto Language Detection</text>
+        <text x="0" y="146" class="box-desc">Heuristic engine for 20+ languages</text>
+      </g>
+    </g>
+
+    <!-- Sub-Block 3: Gemini AI Intelligence Core -->
+    <g transform="translate(540, 56)">
+      <rect width="250" height="220" rx="10" fill="#101522" stroke="rgba(66, 133, 244, 0.4)" stroke-width="1.4" />
+      <rect x="0" y="0" width="250" height="32" rx="10" fill="rgba(66, 133, 244, 0.15)" />
+      <text x="14" y="21" font-family="system-ui" font-size="12" font-weight="700" fill="#93C5FD">🧠 Google GenAI / Vertex AI</text>
+      
+      <g transform="translate(14, 48)">
+        <text x="0" y="12" class="box-title" font-size="12">Gemini 3.8 / 2.5 Flash Engine</text>
+        <text x="0" y="26" class="box-desc">Official Google GenAI SDK integration</text>
+
+        <text x="0" y="52" class="box-title" font-size="12">Extended Thinking Budget</text>
+        <text x="0" y="66" class="box-desc">Configurable reasoning for complex bugs</text>
+
+        <text x="0" y="92" class="box-title" font-size="12">Strict Calibrated Scoring</text>
+        <text x="0" y="106" class="box-desc">Hard score caps on critical/high issues</text>
+
+        <text x="0" y="132" class="box-title" font-size="12">Auto Truncation Repair</text>
+        <text x="0" y="146" class="box-desc">LIFO bracket recovery up to 16k tokens</text>
+      </g>
+    </g>
+
+    <!-- Sub-Block 4: Post-LLM Verification & Integrity -->
+    <g transform="translate(805, 56)">
+      <rect width="255" height="220" rx="10" fill="#101522" stroke="rgba(52, 211, 153, 0.3)" stroke-width="1.2" />
+      <rect x="0" y="0" width="255" height="32" rx="10" fill="rgba(52, 211, 153, 0.12)" />
+      <text x="14" y="21" font-family="system-ui" font-size="12" font-weight="700" fill="#6EE7B7">🔬 Post-LLM Integrity &amp; Fixes</text>
+      
+      <g transform="translate(14, 48)">
+        <text x="0" y="12" class="box-title" font-size="12">1. AST Syntax Fix Validator</text>
+        <text x="0" y="26" class="box-desc">Compiler-verified drops with 0 hallucination</text>
+
+        <text x="0" y="52" class="box-title" font-size="12">2. Architecture &amp; Layer Linter</text>
+        <text x="0" y="66" class="box-desc">Detects circular deps &amp; SOLID breaks</text>
+
+        <text x="0" y="92" class="box-title" font-size="12">3. API Schema Drift Detector</text>
+        <text x="0" y="106" class="box-desc">Flags breaking contract modifications</text>
+
+        <text x="0" y="132" class="box-title" font-size="12">4. Anti-Nitpick Noise Filter</text>
+        <text x="0" y="146" class="box-desc">Collapses style nits to eliminate fatigue</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Flow Arrows Down to Data Layer -->
+  <path d="M 320 625 L 320 660" stroke="#4285F4" stroke-width="2" fill="none" marker-end="url(#arrowBlue)" />
+  <path d="M 880 625 L 880 660" stroke="#34A853" stroke-width="2" fill="none" marker-end="url(#arrowGreen)" />
+
+  <!-- ==================== 4. DATA, ANALYTICS & INSIGHTS LAYER ==================== -->
+  <g transform="translate(60, 665)">
+    <text x="0" y="0" class="section-title">4. Persistence, Analytics &amp; Institutional Memory</text>
+
+    <!-- BigQuery Card -->
+    <g transform="translate(0, 15)" filter="url(#shadow)">
+      <rect width="525" height="95" rx="12" fill="url(#cardBg)" stroke="rgba(66, 133, 244, 0.3)" stroke-width="1.4" />
+      <circle cx="40" cy="48" r="20" fill="rgba(66, 133, 244, 0.15)" />
+      <text x="40" y="54" font-size="18" text-anchor="middle">📊</text>
+      <text x="75" y="36" class="box-title">Google Cloud BigQuery</text>
+      <text x="75" y="54" class="box-desc">• Historical Team Rules &amp; Anti-Patterns Ingestion (CSV pipeline)</text>
+      <text x="75" y="70" class="box-desc">• Partitioned &amp; Clustered Review Event Analytics</text>
+      <text x="75" y="86" class="box-desc">• Feeds Looker Studio Dashboards for Engineering Leadership</text>
+    </g>
+
+    <!-- Firestore Card -->
+    <g transform="translate(555, 15)" filter="url(#shadow)">
+      <rect width="525" height="95" rx="12" fill="url(#cardBg)" stroke="rgba(52, 211, 153, 0.3)" stroke-width="1.4" />
+      <circle cx="40" cy="48" r="20" fill="rgba(52, 211, 153, 0.15)" />
+      <text x="40" y="54" font-size="18" text-anchor="middle">🔥</text>
+      <text x="75" y="36" class="box-title">Google Cloud Firestore</text>
+      <text x="75" y="54" class="box-desc">• Real-time Review Session State &amp; Paginated Replay</text>
+      <text x="75" y="70" class="box-desc">• Developer Growth Profiles &amp; Longitudinal Skill Trajectories</text>
+      <text x="75" y="86" class="box-desc">• Star Ratings &amp; Interactive Feedback Loop for Model Alignment</text>
+    </g>
+  </g>
+
+</svg>
+

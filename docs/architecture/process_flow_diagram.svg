@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080b12" />
+      <stop offset="50%" stop-color="#0e1320" />
+      <stop offset="100%" stop-color="#07090e" />
+    </linearGradient>
+
+    <linearGradient id="gcpBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4285F4" />
+      <stop offset="35%" stop-color="#34A853" />
+      <stop offset="70%" stop-color="#FBBC05" />
+      <stop offset="100%" stop-color="#EA4335" />
+    </linearGradient>
+
+    <linearGradient id="stepCard" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#141926" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0d111a" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <!-- Markers -->
+    <marker id="mArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#6366F1" />
+    </marker>
+    <marker id="mArrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#34A853" />
+    </marker>
+    <marker id="mArrowBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#4285F4" />
+    </marker>
+  </defs>
+
+  <style>
+    .hdr-title { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 24px; font-weight: 800; fill: #FFFFFF; }
+    .hdr-sub { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 500; fill: #94A3B8; }
+    .step-num { font-family: system-ui, sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
+    .step-title { font-family: system-ui, sans-serif; font-size: 14px; font-weight: 700; fill: #F8FAFC; }
+    .step-body { font-family: system-ui, sans-serif; font-size: 11px; fill: #94A3B8; line-height: 1.5; }
+    .tag { font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; }
+  </style>
+
+  <!-- Canvas Background -->
+  <rect width="1200" height="780" fill="url(#bgGrad)" rx="16" />
+  <rect x="2" y="2" width="1196" height="776" fill="none" stroke="rgba(255,255,255,0.08)" rx="14" />
+
+  <!-- Header Banner -->
+  <g transform="translate(60, 40)">
+    <rect x="0" y="0" width="8" height="42" fill="url(#gcpBar)" rx="4" />
+    <text x="24" y="22" class="hdr-title">Code Sarathi | End-to-End Review Process Flow</text>
+    <text x="24" y="38" class="hdr-sub">Automated 6-Stage Zero-Trust Review, AST Verification &amp; Developer Growth Pipeline</text>
+    
+    <rect x="910" y="8" width="170" height="26" rx="13" fill="rgba(66, 133, 244, 0.15)" stroke="rgba(66, 133, 244, 0.3)" />
+    <text x="995" y="25" text-anchor="middle" class="tag" fill="#60A5FA">Sub-2s Execution Cycle</text>
+  </g>
+
+  <!-- ==================== ROW 1: STAGES 1, 2, 3 ==================== -->
+  
+  <!-- STAGE 1: INGESTION & IAP AUTH -->
+  <g transform="translate(60, 110)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(66, 133, 244, 0.4)" stroke-width="1.5" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(66, 133, 244, 0.12)" />
+    <text x="16" y="24" class="step-num" fill="#60A5FA">STAGE 01 • INGESTION &amp; ACCESS</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">📥</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">Developer &amp; CI/CD Ingestion</text>
+      <text x="0" y="38" class="step-body">• Code submitted via Web UI Workbench</text>
+      <text x="0" y="56" class="step-body">• Multi-file PR triggered via GitHub Webhook</text>
+      <text x="0" y="74" class="step-body">• Auto Language Detection (20+ languages)</text>
+      
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">Google Cloud IAP Gateway</text>
+      <text x="0" y="138" class="step-body">• Cryptographic JWT token assertion</text>
+      <text x="0" y="156" class="step-body">• RBAC verification (Engineer/Lead/Admin)</text>
+      <text x="0" y="174" class="step-body">• Zero-trust perimeter protection</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(66, 133, 244, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#93C5FD">Google Cloud IAP</text>
+    </g>
+  </g>
+
+  <!-- Arrow: Stage 1 -> Stage 2 -->
+  <path d="M 390 245 L 430 245" stroke="#6366F1" stroke-width="2.5" fill="none" marker-end="url(#mArrow)" />
+
+  <!-- STAGE 2: PRE-LLM ZERO-TRUST GUARDRAILS -->
+  <g transform="translate(435, 110)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(244, 63, 94, 0.4)" stroke-width="1.5" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(244, 63, 94, 0.12)" />
+    <text x="16" y="24" class="step-num" fill="#FB7185">STAGE 02 • PRE-LLM GUARDRAILS</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">🛡️</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">Pre-LLM Security Screening</text>
+      <text x="0" y="38" class="step-body">• DLP Engine scrubs 15+ secret patterns</text>
+      <text x="0" y="56" class="step-body">• Prompt Injection &amp; Jailbreak defense</text>
+      <text x="0" y="74" class="step-body">• Static SAST scan (command injection, md5)</text>
+
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">Token &amp; Dependency Audit</text>
+      <text x="0" y="138" class="step-body">• Prunes lockfiles (cuts 90% diff tokens)</text>
+      <text x="0" y="156" class="step-body">• Scans package manifests for CVEs &amp; GPL</text>
+      <text x="0" y="174" class="step-body">• Clean diff packaged for model ingestion</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(244, 63, 94, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#FDA4AF">Zero-Data Leakage</text>
+    </g>
+  </g>
+
+  <!-- Arrow: Stage 2 -> Stage 3 -->
+  <path d="M 765 245 L 805 245" stroke="#6366F1" stroke-width="2.5" fill="none" marker-end="url(#mArrow)" />
+
+  <!-- STAGE 3: CACHE & CONTEXT ENRICHMENT -->
+  <g transform="translate(810, 110)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(251, 188, 5, 0.4)" stroke-width="1.5" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(251, 188, 5, 0.12)" />
+    <text x="16" y="24" class="step-num" fill="#FBBF24">STAGE 03 • CACHE &amp; ENRICHMENT</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">⚡</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">SHA-256 Deterministic Cache</text>
+      <text x="0" y="38" class="step-body">• Computes canonical input hash</text>
+      <text x="0" y="56" class="step-body">• Fast-path instant return on cache hit (&lt;10ms)</text>
+      <text x="0" y="74" class="step-body">• 0 API calls for identical code diffs</text>
+
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">BigQuery Rules Enrichment</text>
+      <text x="0" y="138" class="step-body">• Ingests team anti-patterns from CSV</text>
+      <text x="0" y="156" class="step-body">• Contextually injects company guidelines</text>
+      <text x="0" y="174" class="step-body">• Multi-file parallel diff orchestration</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(251, 188, 5, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#FCD34D">BigQuery Enriched</text>
+    </g>
+  </g>
+
+  <!-- Connective Snake Arrow: Stage 3 -> Stage 4 -->
+  <path d="M 975 380 L 975 420 L 975 435" stroke="#4285F4" stroke-width="2.5" fill="none" marker-end="url(#mArrowBlue)" />
+
+  <!-- ==================== ROW 2: STAGES 4, 5, 6 ==================== -->
+
+  <!-- STAGE 4: VERTEX AI GEMINI ENGINE -->
+  <g transform="translate(810, 445)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(66, 133, 244, 0.45)" stroke-width="1.6" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(66, 133, 244, 0.15)" />
+    <text x="16" y="24" class="step-num" fill="#93C5FD">STAGE 04 • GOOGLE VERTEX AI</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">🧠</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">Gemini 3.8 / 2.5 Flash API</text>
+      <text x="0" y="38" class="step-body">• Official Google GenAI SDK integration</text>
+      <text x="0" y="56" class="step-body">• 5-Pillar Analysis: Bugs, Arch, Security,</text>
+      <text x="0" y="74" class="step-body">  Performance, and Developer Growth</text>
+
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">Reasoning &amp; Resilience</text>
+      <text x="0" y="138" class="step-body">• Thinking Budget for deep root-causes</text>
+      <text x="0" y="156" class="step-body">• 16k Token headroom + LIFO bracket repair</text>
+      <text x="0" y="174" class="step-body">• Discovered working model caching</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(66, 133, 244, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#60A5FA">Gemini Flash Core</text>
+    </g>
+  </g>
+
+  <!-- Arrow: Stage 4 -> Stage 5 (Leftward) -->
+  <path d="M 810 580 L 770 580" stroke="#6366F1" stroke-width="2.5" fill="none" marker-end="url(#mArrow)" />
+
+  <!-- STAGE 5: POST-LLM COMPILER VERIFICATION -->
+  <g transform="translate(435, 445)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(52, 211, 153, 0.4)" stroke-width="1.5" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(52, 211, 153, 0.12)" />
+    <text x="16" y="24" class="step-num" fill="#34D399">STAGE 05 • COMPILER VERIFICATION</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">🔬</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">AST Compiler Syntax Validator</text>
+      <text x="0" y="38" class="step-body">• Language compiler (`ast.parse`) verifies</text>
+      <text x="0" y="56" class="step-body">  all suggested fixes before rendering</text>
+      <text x="0" y="74" class="step-body">• 100% elimination of hallucinated syntax</text>
+
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">Integrity Linters &amp; Anti-Nitpick</text>
+      <text x="0" y="138" class="step-body">• Arch Linter checks circular imports &amp; SOLID</text>
+      <text x="0" y="156" class="step-body">• Contract Drift detector flags API breaks</text>
+      <text x="0" y="174" class="step-body">• Anti-nitpick isolates style comments</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(52, 211, 153, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#6EE7B7">Compiler Verified</text>
+    </g>
+  </g>
+
+  <!-- Arrow: Stage 5 -> Stage 6 (Leftward) -->
+  <path d="M 435 580 L 395 580" stroke="#34A853" stroke-width="2.5" fill="none" marker-end="url(#mArrowGreen)" />
+
+  <!-- STAGE 6: DECISION, TRIAGE & PERSISTENCE -->
+  <g transform="translate(60, 445)" filter="url(#cardShadow)">
+    <rect width="330" height="270" rx="14" fill="url(#stepCard)" stroke="rgba(129, 140, 248, 0.4)" stroke-width="1.5" />
+    <rect x="0" y="0" width="330" height="38" rx="14" fill="rgba(129, 140, 248, 0.12)" />
+    <text x="16" y="24" class="step-num" fill="#818CF8">STAGE 06 • DECISION &amp; INSIGHTS</text>
+    <text x="300" y="24" font-size="14" text-anchor="middle">🎯</text>
+
+    <g transform="translate(20, 56)">
+      <text x="0" y="16" class="step-title">Executive Triage HUD</text>
+      <text x="0" y="38" class="step-body">• Calibrated Verdict: Approved / Changes Req.</text>
+      <text x="0" y="56" class="step-body">• Top Risks, Quick Wins &amp; Remediation Time</text>
+      <text x="0" y="74" class="step-body">• One-click copy for verified AST fix snippets</text>
+
+      <rect x="0" y="96" width="290" height="1" fill="rgba(255,255,255,0.08)" />
+
+      <text x="0" y="118" class="step-title">GCP Storage &amp; Dashboards</text>
+      <text x="0" y="138" class="step-body">• BigQuery streams partitioned telemetry</text>
+      <text x="0" y="156" class="step-body">• Looker Studio monitors engineering health</text>
+      <text x="0" y="174" class="step-body">• Firestore stores developer growth profile</text>
+
+      <rect x="0" y="188" width="130" height="20" rx="10" fill="rgba(129, 140, 248, 0.15)" />
+      <text x="65" y="202" text-anchor="middle" class="tag" fill="#C7D2FE">Looker &amp; Firestore</text>
+    </g>
+  </g>
+
+  <!-- Loopback Flow Label -->
+  <text x="600" y="750" text-anchor="middle" font-family="system-ui" font-size="11" fill="#64748B">
+    Continuous Feedback Loop • Developer implements fixes in &lt;5 mins • Zero breaking changes merge to Production
+  </text>
+
+</svg>
+
